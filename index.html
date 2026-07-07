@@ -37,7 +37,7 @@
             <h1 class="text-xl font-bold tracking-wider">GESTION LOTEAMIENTO CAMBYRETA</h1>
         </div>
         <div class="text-sm bg-slate-700 px-3 py-1 rounded text-slate-300">
-            Cálculo de Estados: <span class="text-emerald-400 font-bold">Automatizado</span>
+            Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real (Autoguardado)</span>
         </div>
     </header>
 
@@ -55,7 +55,7 @@
                         <div class="w-8 h-4 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
                 </div>
-                <p class="text-[11px] text-slate-400 mb-2 leading-tight">Activa para nombrar lotes en serie haciendo clics consecutivos sobre el plano.</p>
+                <p class="text-[11px] text-slate-400 mb-2 leading-tight">Activa para nombrar lotes en serie haciendo clics consecutivos sobre el plano. Se guarda automáticamente en la nube.</p>
                 <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-700 hidden">
                     <div>
                         <label class="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Manzana</label>
@@ -224,7 +224,7 @@
                     </div>
 
                     <div id="seccion-financiera" class="bg-white p-3 rounded-xl shadow-xs border border-gray-200 space-y-2.5">
-                        <div class="text-[11px] font-bold text-slate-400 uppercase border-b pb-1">Condiciones del Crédito</div>
+                        <div class="text-[11px] font-bold text-slate-400 uppercase border-b pb-1">Conditions del Crédito</div>
                         
                         <div class="grid grid-cols-2 gap-2">
                             <div>
@@ -408,8 +408,8 @@
 
                                 elemento.style.fill = coloresRelleno["disponible"];
                                 
-                                // Subir cambios instantáneos por clic en modo asignación serial
-                                set(lotesRef, baseDatosLotes);
+                                // OPTIMIZACIÓN: Guarda instantáneamente SOLO este lote en Firebase al hacer clic
+                                set(ref(db, 'lotes/' + idReal), baseDatosLotes[idReal]);
                                 
                                 document.getElementById('map-nro').value = nroAsig + 1;
                                 
@@ -423,7 +423,7 @@
                     }
                 });
 
-                // Si la base de datos en la nube estaba vacía, sube la configuración base detectada automáticamente
+                // Si la base de datos en la nube estaba vacía, sube la configuración completa inicializada
                 if (Object.keys(datosNube).length === 0 && Object.keys(baseDatosLotes).length > 0) {
                     set(lotesRef, baseDatosLotes);
                 }
@@ -432,7 +432,7 @@
                 calcularMetricasYFiltros();
                 filtrarMapa(filtroActivoActual);
 
-                // Si se está visualizando un lote en pantalla pero NO se está editando en este instante, actualizar campos en vivo
+                // Sincronizar en vivo los campos de la ficha derecha si no está en modo edición activa
                 if (loteSeleccionadoActual) {
                     const panelEdicionOculto = document.getElementById('controles-edicion-activa').classList.contains('hidden');
                     if (panelEdicionOculto) {
@@ -475,7 +475,7 @@
                 document.getElementById('info-lote').classList.add('hidden');
                 document.getElementById('panel-acciones').classList.add('hidden');
                 document.getElementById('info-vacia').classList.remove('hidden');
-                document.getElementById('info-vacia').innerHTML = `<p class="text-2xl mb-1">⚡ Modo Asignación Activo</p><p class="text-xs px-4">Haz clics ordenados en los lotes del plano para numerarlos instantáneamente.</p>`;
+                document.getElementById('info-vacia').innerHTML = `<p class="text-2xl mb-1">⚡ Asignación en Serie</p><p class="text-xs px-4 text-slate-500">Haz clics consecutivos sobre los polígonos del plano para numerarlos. Los cambios impactan directo en internet.</p>`;
             } else {
                 controles.classList.add('hidden');
                 document.getElementById('info-vacia').innerHTML = `<p class="text-3xl mb-2">🖱️</p><p class="text-sm px-4 font-medium">Haz clic sobre cualquier cuadro del plano para ver sus datos.</p>`;
@@ -704,8 +704,8 @@
             const el = document.getElementById(loteSeleccionadoActual);
             if (el) el.style.fill = coloresRelleno[estadoFinal];
 
-            // Envío del objeto actualizado directamente a Firebase
-            set(lotesRef, baseDatosLotes)
+            // OPTIMIZACIÓN: Guarda instantáneamente SOLO el lote modificado en su nodo individual
+            set(ref(db, 'lotes/' + loteSeleccionadoActual), d)
                 .catch((error) => {
                     alert("Error crítico de red al guardar en la nube: " + error.message);
                 });

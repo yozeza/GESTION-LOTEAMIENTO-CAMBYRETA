@@ -62,8 +62,6 @@
         
         <aside class="w-full md:w-72 bg-slate-50 p-4 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col gap-4 shadow-sm">
             
-            <!-- La sección completa de Asignación Rápida fue eliminada de aquí -->
-
             <div class="hidden sm:block">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Resumen</h3>
                 <div class="grid grid-cols-1 gap-1.5">
@@ -278,8 +276,8 @@
         </aside>
     </div>
 
-    <!-- ÍCONO FLOTANTE DISCRETO DE ASIGNACIÓN RÁPIDA (ESQUINA SUPERIOR DERECHA) -->
-    <div id="modo-mapeo-flotante" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
+    <!-- ÍCONO FLOTANTE DISCRETO DE ASIGNACIÓN RÁPIDA (ESQUINA SUPERIOR DERECHA, MOVIDO A LA IZQUIERDA) -->
+    <div id="modo-mapeo-flotante" class="fixed top-4 right-16 z-50 flex flex-col items-end space-y-2">
         <button id="btn-modo-mapeo" onclick="toggleMapeo()" title="Asignación Rápida de Lotes" class="bg-white hover:bg-gray-50 text-gray-500 rounded-full w-10 h-10 flex items-center justify-center border border-gray-200 text-lg transition-colors cursor-pointer">
             🛠️
         </button>
@@ -395,7 +393,8 @@
                         elemento.addEventListener('click', (e) => {
                             e.stopPropagation();
                             
-                            if (modoMapeoActive || modoMapeoActivo) {
+                            // CORREGIDO: variable bien escrita
+                            if (modoMapeoActivo) {
                                 const mzaAsig = document.getElementById('map-mza').value.toUpperCase().trim();
                                 const nroAsig = parseInt(document.getElementById('map-nro').value) || 1;
 
@@ -452,8 +451,15 @@
         // Control del pequeño ícono flotante
         function toggleMapeo() {
             const chk = document.getElementById('chk-modo-mapeo');
-            chk.checked = !chk.checked;
-            conmutarModoMapeo();
+            // Si el panel está oculto, lo abrimos y activamos el checkbox
+            if (document.getElementById('panel-mapeo').classList.contains('hidden')) {
+                chk.checked = true;
+                conmutarModoMapeo();
+            } else {
+                // Si está visible, lo cerramos y desactivamos
+                chk.checked = false;
+                conmutarModoMapeo();
+            }
         }
 
         function conmutarModoMapeo() {

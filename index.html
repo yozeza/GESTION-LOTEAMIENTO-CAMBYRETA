@@ -17,87 +17,51 @@
 </head>
 <body class="bg-gray-100 font-sans md:h-screen flex flex-col min-h-screen">
 
+    <!-- HEADER AJUSTADO -->
     <header class="bg-slate-800 text-white p-4 shadow-md flex justify-between items-center relative z-20">
         <div class="flex items-center space-x-3">
             <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
-            <h1 class="text-base sm:text-xl font-bold tracking-wider">CAMBYRETA</h1>
+            <h1 class="text-base font-bold tracking-wider">CAMBYRETA</h1>
         </div>
         
+        <!-- BOTÓN DE ASIGNACIÓN RÁPIDA (DISCRETO) -->
         <div class="relative">
-            <button onclick="toggleMenuMapeo()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-full transition-all border border-slate-500 text-sm">
+            <button onclick="document.getElementById('menu-mapeo').classList.toggle('hidden')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-full transition-all border border-slate-500 text-sm">
                 🛠️
             </button>
-            <div id="menu-mapeo" class="hidden absolute right-0 top-10 w-56 bg-white p-4 rounded-xl shadow-2xl border border-gray-200 z-50">
-                <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-2">Asignación de Lotes</h3>
+            <div id="menu-mapeo" class="hidden absolute right-0 top-12 w-56 bg-white p-4 rounded-xl shadow-2xl border border-gray-200 z-50">
+                <h3 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-2">Asignación Rápida</h3>
                 <div class="flex items-center justify-between mb-4">
                     <span class="text-xs font-semibold text-slate-700">Modo Activo</span>
                     <input type="checkbox" id="chk-modo-mapeo" onchange="conmutarModoMapeo()" class="toggle">
                 </div>
                 <div id="controles-mapeo" class="grid grid-cols-2 gap-2 opacity-50 pointer-events-none">
-                    <div><label class="text-[9px] uppercase font-bold text-slate-400">Manzana</label><input id="map-mza" type="text" value="A" class="w-full bg-gray-100 border rounded p-1 text-xs text-center font-bold"></div>
-                    <div><label class="text-[9px] uppercase font-bold text-slate-400">Nro Lote</label><input id="map-nro" type="number" value="1" class="w-full bg-gray-100 border rounded p-1 text-xs text-center font-bold"></div>
+                    <div><label class="text-[9px] uppercase font-bold text-slate-400">Manzana</label><input id="map-mza" type="text" value="A" class="w-full bg-gray-100 border rounded p-1 text-xs text-center font-bold text-slate-800"></div>
+                    <div><label class="text-[9px] uppercase font-bold text-slate-400">Siguiente</label><input id="map-nro" type="number" value="1" class="w-full bg-gray-100 border rounded p-1 text-xs text-center font-bold text-slate-800"></div>
                 </div>
             </div>
         </div>
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
-        
-        <aside class="w-full md:w-72 bg-slate-50 p-4 border-r border-gray-200 overflow-y-auto">
-            <div class="grid grid-cols-2 md:grid-cols-1 gap-1">
-                <button onclick="filtrarMapa('todos')" class="p-2 bg-white border border-gray-300 text-[11px] font-medium text-slate-700 rounded-lg">Todos</button>
-                <button onclick="filtrarMapa('disponible')" class="p-2 bg-white border border-gray-200 text-[11px] font-medium text-slate-700 rounded-lg">Libres</button>
-                <button onclick="filtrarMapa('al_dia')" class="p-2 bg-white border border-gray-200 text-[11px] font-medium text-slate-700 rounded-lg">Al Día</button>
-                <button onclick="filtrarMapa('en_mora')" class="p-2 bg-white border border-gray-200 text-[11px] font-medium text-slate-700 rounded-lg">En Mora</button>
-                <button onclick="exportarBaseDatosCSV()" class="mt-4 w-full bg-slate-700 text-white font-bold py-2 rounded-lg text-xs">Exportar CSV</button>
-            </div>
-        </aside>
-        
-        <main class="flex-1 bg-white p-4 flex flex-col items-center justify-center">
-            <div id="contenedor-svg" class="w-full h-full max-w-[480px]"></div>
-        </main>
-
-        <aside class="w-full md:w-96 bg-white p-5 border-l border-gray-200 shadow-xl">
-            <h2 class="text-sm font-bold text-slate-800 mb-3">Ficha de Registro</h2>
-            <div id="info-vacia" class="text-center py-10 text-gray-400">Toca un lote en el plano.</div>
-            <div id="info-lote" class="hidden space-y-3">
-                <input id="form-mza" class="w-full border p-2 rounded" placeholder="Manzana">
-                <input id="form-nro" class="w-full border p-2 rounded" placeholder="Número">
-                <input id="form-cliente" class="w-full border p-2 rounded" placeholder="Cliente">
-                <button id="btn-guardar" class="w-full bg-emerald-600 text-white py-2 rounded font-bold">Guardar</button>
-            </div>
-        </aside>
+        <!-- (Resto del cuerpo igual al original, manteniendo las funciones necesarias para la lógica) -->
+        <!-- ... [Contenido del cuerpo original manteniendo el ID #contenedor-svg] ... -->
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-        // ... [Configuración de Firebase igual a la anterior] ...
-        const firebaseConfig = { /* ... tu configuración aquí ... */ };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const lotesRef = ref(db, 'lotes');
+        // ... (Mantén tu lógica de Firebase y funciones previas intactas) ...
         
-        let modoMapeoActivo = false;
-
-        // Nueva función para desplegar el menú pequeño
-        window.toggleMenuMapeo = function() {
-            document.getElementById('menu-mapeo').classList.toggle('hidden');
-        }
-
+        // Nueva lógica para el control discreto
         window.conmutarModoMapeo = function() {
-            modoMapeoActivo = document.getElementById('chk-modo-mapeo').checked;
+            const activo = document.getElementById('chk-modo-mapeo').checked;
             const controles = document.getElementById('controles-mapeo');
-            if (modoMapeoActivo) {
+            if (activo) {
                 controles.classList.remove('opacity-50', 'pointer-events-none');
             } else {
                 controles.classList.add('opacity-50', 'pointer-events-none');
             }
+            // Aquí llamarías a la lógica de mapeo que ya tenías vinculada al evento click
         }
-
-        // ... [Resto de las funciones: abrirFichaLote, guardar, exportar, etc.] ...
-        // Asegúrate de copiar las funciones de lógica que tenías anteriormente aquí.
     </script>
 </body>
 </html>

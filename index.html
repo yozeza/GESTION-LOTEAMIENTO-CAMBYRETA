@@ -289,8 +289,29 @@
         </aside>
     </div>
 
-    <script>
-        let baseDatosLotes = JSON.parse(localStorage.getItem('bd_lotes_cambyreta')) || {};
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        // Credenciales oficiales del proyecto vinculadas con Realtime Database
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg",
+            authDomain: "cambyreta-lotes.firebaseapp.com",
+            databaseURL: "https://cambyreta-lotes-default-rtdb.firebaseio.com",
+            projectId: "cambyreta-lotes",
+            storageBucket: "cambyreta-lotes.firebasestorage.app",
+            messagingSenderId: "614326622443",
+            appId: "1:614326622443:web:7979f0d0aee5986f0a06ae"
+        };
+
+        // Inicialización de la App y Base de Datos
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const lotesRef = ref(db, 'lotes');
+
+        // Estado del sistema en memoria local (sincronizado con la nube)
+        let baseDatosLotes = {};
+        let primerCargaNubeCompleta = false;
 
         const coloresRelleno = {
             "disponible": "#ffffff", 
@@ -301,8 +322,8 @@
             "plaza": "#22c55e", 
             "reserva": "#15803d",
             "recuperado": "#fef08a",
-            "reservado": "#7dd3fc",    // Azul Claro para Lotes Reservados con Seña
-            "transferido": "#a78bfa"   // Violeta para Lotes Totalmente Pagados y Titulados
+            "reservado": "#7dd3fc",    
+            "transferido": "#a78bfa"   
         };
 
         const textosEstados = {
@@ -316,12 +337,12 @@
         let filtroActivoActual = "todos";
         let modoMapeoActivo = false;
 
+        // Cargar Plano Vectorial
         fetch('LOTES CAMBYRETA.svg')
             .then(response => { if (!response.ok) throw new Error(); return response.text(); })
             .then(svgText => {
                 document.getElementById('contenedor-svg').innerHTML = svgText;
-                prepararGeometriasSVG();
-                calcularMetricasYFiltros();
+                conectarYEscucharNube();
             })
             .catch(() => {
                 document.getElementById('contenedor-svg').innerHTML = `
@@ -329,6 +350,97 @@
                         Error al cargar el plano. Verifica el nombre exacto del archivo SVG.
                     </div>`;
             });
+
+        // Sincronización bidireccional en Tiempo Real
+        function conectarYEscucharNube() {
+            onValue(lotesRef, (snapshot) => {
+                const datosNube = snapshot.val() || {};
+                const contenedor = document.getElementById('contenedor-svg');
+                if (!contenedor) return;
+                
+                const figuras = contenedor.querySelectorAll('rectangle, polygon, path, rect');
+                
+                figuras.forEach((elemento, indice) => {
+                    if (!elemento.id) elemento.id = `vector-auto-${indice + 1}`;
+                    const idReal = elemento.id;
+
+                    // Si el elemento existe en Firebase se usa, si no, se procesa la autodetección CAD local
+                    if (datosNube[idReal]) {
+                        baseDatosLotes[idReal] = datosNube[idReal];
+                    } else if (!baseDatosLotes[idReal]) {
+                        const datosDetectados = analizarAtributosElementoCAD(elemento);
+                        if (datosDetectados) {
+                            baseDatosLotes[idReal] = {
+                                mza: datosDetectados.mza,
+                                nro: datosDetectados.nro,
+                                tipo: "comercial",
+                                estado: "disponible",
+                                cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
+                                reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
+                            };
+                        }
+                    }
+
+                    // Pintar plano según el estado sincronizado
+                    if (baseDatosLotes[idReal]) {
+                        elemento.style.fill = coloresRelleno[baseDatosLotes[idReal].estado] || coloresRelleno["disponible"];
+                    } else {
+                        elemento.style.fill = coloresRelleno["disponible"];
+                    }
+
+                    // Asignar escuchadores de eventos al plano (Solo en el primer renderizado)
+                    if (!primerCargaNubeCompleta) {
+                        elemento.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            
+                            if (modoMapeoActivo) {
+                                const mzaAsig = document.getElementById('map-mza').value.toUpperCase().trim();
+                                const nroAsig = parseInt(document.getElementById('map-nro').value) || 1;
+
+                                baseDatosLotes[idReal] = {
+                                    mza: mzaAsig,
+                                    nro: String(nroAsig).padStart(2, '0'),
+                                    tipo: "comercial",
+                                    estado: "disponible",
+                                    cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
+                                    reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
+                                };
+
+                                elemento.style.fill = coloresRelleno["disponible"];
+                                
+                                // Subir cambios instantáneos por clic en modo asignación serial
+                                set(lotesRef, baseDatosLotes);
+                                
+                                document.getElementById('map-nro').value = nroAsig + 1;
+                                
+                                calcularMetricasYFiltros();
+                                abrirFichaLote(idReal); 
+                                return;
+                            }
+
+                            abrirFichaLote(idReal);
+                        });
+                    }
+                });
+
+                // Si la base de datos en la nube estaba vacía, sube la configuración base detectada automáticamente
+                if (Object.keys(datosNube).length === 0 && Object.keys(baseDatosLotes).length > 0) {
+                    set(lotesRef, baseDatosLotes);
+                }
+
+                primerCargaNubeCompleta = true;
+                calcularMetricasYFiltros();
+                filtrarMapa(filtroActivoActual);
+
+                // Si se está visualizando un lote en pantalla pero NO se está editando en este instante, actualizar campos en vivo
+                if (loteSeleccionadoActual) {
+                    const panelEdicionOculto = document.getElementById('controles-edicion-activa').classList.contains('hidden');
+                    if (panelEdicionOculto) {
+                        abrirFichaLote(loteSeleccionadoActual);
+                    }
+                }
+            });
+        }
 
         function analizarAtributosElementoCAD(elemento) {
             const poolTextos = [
@@ -370,66 +482,6 @@
             }
         }
 
-        function prepararGeometriasSVG() {
-            const contenedor = document.getElementById('contenedor-svg');
-            const figuras = contenedor.querySelectorAll('rectangle, polygon, path, rect');
-            
-            figuras.forEach((elemento, indice) => {
-                if (!elemento.id) elemento.id = `vector-auto-${indice + 1}`;
-                const idReal = elemento.id;
-
-                if (!baseDatosLotes[idReal]) {
-                    const datosDetectados = analizarAtributosElementoCAD(elemento);
-                    if (datosDetectados) {
-                        baseDatosLotes[idReal] = {
-                            mza: datosDetectados.mza,
-                            nro: datosDetectados.nro,
-                            tipo: "comercial",
-                            estado: "disponible",
-                            cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
-                            reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
-                        };
-                    }
-                }
-
-                if (baseDatosLotes[idReal]) {
-                    elemento.style.fill = coloresRelleno[baseDatosLotes[idReal].estado] || coloresRelleno["disponible"];
-                } else {
-                    elemento.style.fill = coloresRelleno["disponible"];
-                }
-
-                elemento.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    
-                    if (modoMapeoActivo) {
-                        const mzaAsig = document.getElementById('map-mza').value.toUpperCase().trim();
-                        const nroAsig = parseInt(document.getElementById('map-nro').value) || 1;
-
-                        baseDatosLotes[idReal] = {
-                            mza: mzaAsig,
-                            nro: String(nroAsig).padStart(2, '0'),
-                            tipo: "comercial",
-                            estado: "disponible",
-                            cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
-                            reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
-                        };
-
-                        elemento.style.fill = coloresRelleno["disponible"];
-                        localStorage.setItem('bd_lotes_cambyreta', JSON.stringify(baseDatosLotes));
-                        
-                        document.getElementById('map-nro').value = nroAsig + 1;
-                        
-                        calcularMetricasYFiltros();
-                        abrirFichaLote(idReal); 
-                        return;
-                    }
-
-                    abrirFichaLote(idReal);
-                });
-            });
-            localStorage.setItem('bd_lotes_cambyreta', JSON.stringify(baseDatosLotes));
-        }
-
         function abrirFichaLote(idReal) {
             if (modoMapeoActivo) return;
             loteSeleccionadoActual = idReal;
@@ -465,7 +517,6 @@
             document.getElementById('form-cuota-actual').value = datos.cuotaActual || "";
             document.getElementById('form-fecha-inicio').value = datos.fechaInicio || "";
             
-            // Cargar datos de Reserva
             document.getElementById('form-reserva-nombre').value = datos.reservaNombre || "";
             document.getElementById('form-reserva-monto').value = datos.reservaMonto || "";
             document.getElementById('form-reserva-fecha-fin').value = datos.reservaFechaFin || "";
@@ -502,7 +553,6 @@
             const seccionReserva = document.getElementById('seccion-reserva');
             const lblCliente = document.getElementById('lbl-cliente');
 
-            // Ocultar paneles por defecto
             seccionCliente.classList.add('hidden');
             seccionFinanciera.classList.add('hidden');
             seccionReserva.classList.add('hidden');
@@ -515,7 +565,7 @@
                 seccionReserva.classList.remove('hidden');
             } else if (tipo === 'transferido') {
                 lblCliente.innerText = "Propietario Titulado";
-                seccionCliente.classList.remove('hidden'); // Solo requiere el nombre del titular
+                seccionCliente.classList.remove('hidden');
             }
             calcularCamposAutomaticos();
         }
@@ -540,7 +590,6 @@
                 estadoCalculado = 'disponible';
             } 
             else if (fechaInicioVal && cantCuotas > 0) {
-                // CONDICIÓN AUTOMÁTICA: Si ya pagó todo el terreno, pasa a Transferido y Titulado
                 if (cuotaActual >= cantCuotas) {
                     estadoCalculado = "transferido";
                 } else {
@@ -563,7 +612,6 @@
             if (badge) {
                 badge.innerText = textosEstados[estadoCalculado];
                 badge.style.backgroundColor = coloresRelleno[estadoCalculado];
-                // Ajustar contraste de texto
                 if (estadoCalculado === 'disponible' || estadoCalculado === 'recuperado' || estadoCalculado === 'reservado') {
                     badge.style.color = '#1e293b';
                 } else {
@@ -656,7 +704,11 @@
             const el = document.getElementById(loteSeleccionadoActual);
             if (el) el.style.fill = coloresRelleno[estadoFinal];
 
-            localStorage.setItem('bd_lotes_cambyreta', JSON.stringify(baseDatosLotes));
+            // Envío del objeto actualizado directamente a Firebase
+            set(lotesRef, baseDatosLotes)
+                .catch((error) => {
+                    alert("Error crítico de red al guardar en la nube: " + error.message);
+                });
 
             calcularMetricasYFiltros();
             filtrarMapa(filtroActivoActual);
@@ -692,13 +744,12 @@
                     if (estado === "reservado") reservado++;
                     if (estado === "transferido") transferido++;
 
-                    // No computar áreas comunes institucionales o reservas del dueño en métricas comerciales fijas
                     if (estado !== "plaza" && estado !== "reserva" && estado !== "recuperado") {
                         totalValidos++;
                         if (estado === "disponible" || estado === "reservado") {
-                            libresValidos++; // Todavía se pueden comercializar/cerrar
+                            libresValidos++; 
                         } else {
-                            ocupadosValidos++; // Vendidos, en mora o ya titulados
+                            ocupadosValidos++; 
                         }
                     }
                 }
@@ -776,7 +827,6 @@
                 const tipo = `"${lote.tipo ? lote.tipo.toUpperCase() : 'COMERCIAL'}"`;
                 const estado = `"${textosEstados[lote.estado] || lote.estado}"`;
                 
-                // Determinar el nombre a mostrar en el listado
                 let titular = lote.cliente || "";
                 if (lote.estado === 'reservado') titular = lote.reservaNombre || "";
 
@@ -810,6 +860,15 @@
             linkDescarga.click();
             document.body.removeChild(linkDescarga);
         }
+
+        // Vincular funciones globales al objeto window para mantener compatibilidad con atributos HTML
+        window.conmutarModoMapeo = conmutarModoMapeo;
+        window.alternarCamposPorTipo = alternarCamposPorTipo;
+        window.calcularCamposAutomaticos = calcularCamposAutomaticos;
+        window.borrarTodosLosCampos = borrarTodosLosCampos;
+        window.ponerEnRecuperacion = ponerEnRecuperacion;
+        window.filtrarMapa = filtrarMapa;
+        window.exportarBaseDatosCSV = exportarBaseDatosCSV;
     </script>
 </body>
 </html>

@@ -12,7 +12,7 @@
         #contenedor-svg rect {
             cursor: pointer;
             transition: all 0.2s ease-in-out;
-            -webkit-tap-highlight-color: transparent; /* Evita el parpadeo azul feo en móviles al tocar */
+            -webkit-tap-highlight-color: transparent;
         }
         
         #contenedor-svg rectangle:hover,
@@ -25,13 +25,24 @@
         #contenedor-svg svg {
             width: 100% !important;
             height: auto !important;
-            max-height: 60vh; /* Optimiza el espacio vertical en pantallas móviles */
+            max-height: 60vh;
         }
         
         @media (min-width: 768px) {
             #contenedor-svg svg {
                 max-height: 75vh;
             }
+        }
+
+        /* Pequeño ícono flotante de mapeo */
+        #btn-modo-mapeo {
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        #btn-modo-mapeo.activo {
+            background-color: #d1fae5;
+            color: #065f46;
+            border-color: #6ee7b7;
         }
     </style>
 </head>
@@ -51,30 +62,10 @@
         
         <aside class="w-full md:w-72 bg-slate-50 p-4 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col gap-4 shadow-sm">
             
-            <div class="bg-slate-800 text-white p-3.5 rounded-xl shadow-md border border-slate-700">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center">
-                        <span class="mr-1.5">🛠️</span> Asignación Rápida
-                    </h3>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="chk-modo-mapeo" onchange="conmutarModoMapeo()" class="sr-only peer">
-                        <div class="w-8 h-4 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
-                    </label>
-                </div>
-                <p class="text-[11px] text-slate-400 mb-2 leading-tight">Activa para nombrar lotes en serie haciendo toques consecutivos sobre el plano.</p>
-                <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-700 hidden">
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Manzana</label>
-                        <input id="map-mza" type="text" value="A" class="w-full bg-slate-700 border border-slate-600 rounded p-1.5 text-xs text-center font-bold text-white uppercase focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Siguiente Lote</label>
-                        <input id="map-nro" type="number" value="1" class="w-full bg-slate-700 border border-slate-600 rounded p-1.5 text-xs text-center font-bold text-white focus:outline-none">
-                    </div>
-                </div>
-            </div>
+            <!-- La sección completa de Asignación Rápida fue eliminada de aquí -->
 
-            <div class="hidden sm:block"> <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Resumen</h3>
+            <div class="hidden sm:block">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Resumen</h3>
                 <div class="grid grid-cols-1 gap-1.5">
                     <div class="bg-white p-2 rounded-xl border border-gray-200 flex justify-between items-center shadow-xs">
                         <span class="text-[11px] text-gray-600 font-medium">Total Lotes</span>
@@ -287,6 +278,36 @@
         </aside>
     </div>
 
+    <!-- ÍCONO FLOTANTE DISCRETO DE ASIGNACIÓN RÁPIDA (ESQUINA SUPERIOR DERECHA) -->
+    <div id="modo-mapeo-flotante" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2">
+        <button id="btn-modo-mapeo" onclick="toggleMapeo()" title="Asignación Rápida de Lotes" class="bg-white hover:bg-gray-50 text-gray-500 rounded-full w-10 h-10 flex items-center justify-center border border-gray-200 text-lg transition-colors cursor-pointer">
+            🛠️
+        </button>
+
+        <!-- Panel colapsable con los controles (aparece al activar el modo) -->
+        <div id="panel-mapeo" class="hidden bg-white p-3.5 rounded-xl shadow-lg border border-gray-200 w-64 text-xs">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Asignación Rápida</h3>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="chk-modo-mapeo" onchange="conmutarModoMapeo()" class="sr-only peer">
+                    <div class="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+            </div>
+            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Activa para nombrar lotes en serie tocando sobre el plano.</p>
+            <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 hidden">
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-gray-500 block mb-0.5">Manzana</label>
+                    <input id="map-mza" type="text" value="A" class="w-full bg-gray-100 border border-gray-300 rounded p-1.5 text-xs text-center font-bold uppercase focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-gray-500 block mb-0.5">Sig. Lote</label>
+                    <input id="map-nro" type="number" value="1" class="w-full bg-gray-100 border border-gray-300 rounded p-1.5 text-xs text-center font-bold focus:outline-none">
+                </div>
+            </div>
+            <button onclick="toggleMapeo()" class="mt-2 w-full text-center text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer">Cerrar panel</button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -428,11 +449,23 @@
             return null;
         }
 
+        // Control del pequeño ícono flotante
+        function toggleMapeo() {
+            const chk = document.getElementById('chk-modo-mapeo');
+            chk.checked = !chk.checked;
+            conmutarModoMapeo();
+        }
+
         function conmutarModoMapeo() {
             modoMapeoActivo = document.getElementById('chk-modo-mapeo').checked;
             const controles = document.getElementById('controles-mapeo');
+            const panel = document.getElementById('panel-mapeo');
+            const btn = document.getElementById('btn-modo-mapeo');
+
             if (modoMapeoActivo) {
                 controles.classList.remove('hidden');
+                panel.classList.remove('hidden');
+                btn.classList.add('activo');
                 quitarBordesSeleccion();
                 document.getElementById('info-lote').classList.add('hidden');
                 document.getElementById('panel-acciones').classList.add('hidden');
@@ -440,6 +473,8 @@
                 document.getElementById('info-vacia').innerHTML = `<p class="text-base mb-1 font-bold text-slate-700">⚡ Asignación en Serie</p><p class="text-[11px] px-2 text-slate-500">Toca consecutivamente sobre los polígonos del plano para numerarlos.</p>`;
             } else {
                 controles.classList.add('hidden');
+                panel.classList.add('hidden');
+                btn.classList.remove('activo');
                 document.getElementById('info-vacia').innerHTML = `<p class="text-2xl mb-2">🖱️</p><p class="text-xs px-4 font-medium">Toca cualquier lote en el plano para ver o editar sus datos.</p>`;
             }
         }
@@ -484,7 +519,6 @@
             alternarCamposPorTipo();
             setFormEditable(false); 
             
-            // Móviles: Desplaza la pantalla suavemente hacia la ficha para que se note el cambio al tocar un lote
             if(window.innerWidth < 768) {
                 document.getElementById('info-lote').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
@@ -726,9 +760,15 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
-        window.conmutarModoMapeo = conmutarModoMapeo; window.alternarCamposPorTipo = alternarCamposPorTipo;
-        window.calcularCamposAutomaticos = calcularCamposAutomaticos; window.borrarTodosLosCampos = borrarTodosLosCampos;
-        window.ponerEnRecuperacion = ponerEnRecuperacion; window.filtrarMapa = filtrarMapa; window.exportarBaseDatosCSV = exportarBaseDatosCSV;
+        // Exponer funciones globales necesarias
+        window.toggleMapeo = toggleMapeo;
+        window.conmutarModoMapeo = conmutarModoMapeo;
+        window.alternarCamposPorTipo = alternarCamposPorTipo;
+        window.calcularCamposAutomaticos = calcularCamposAutomaticos;
+        window.borrarTodosLosCampos = borrarTodosLosCampos;
+        window.ponerEnRecuperacion = ponerEnRecuperacion;
+        window.filtrarMapa = filtrarMapa;
+        window.exportarBaseDatosCSV = exportarBaseDatosCSV;
     </script>
 </body>
 </html>

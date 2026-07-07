@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GESTION LOTEAMIENTO CAMBYRETA</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        #contenedor-svg rectangle,
+        #contenedor-svg polygon, 
+        #contenedor-svg path, 
+        #contenedor-svg rect {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        #contenedor-svg rectangle:hover,
+        #contenedor-svg polygon:hover, 
+        #contenedor-svg path:hover, 
+        #contenedor-svg rect:hover {
+            fill-opacity: 0.85;
+            filter: drop-shadow(0px 6px 10px rgba(0,0,0,0.4));
+        }
+
+        #contenedor-svg svg {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 70vh;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
+
+    <header class="bg-slate-800 text-white p-4 shadow-md flex justify-between items-center z-10">
+        <div class="flex items-center space-x-3">
+            <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
+            <h1 class="text-xl font-bold tracking-wider">GESTION LOTEAMIENTO CAMBYRETA</h1>
+        </div>
+        <div class="text-sm bg-slate-700 px-3 py-1 rounded text-slate-300">
+            Cálculo de Estados: <span class="text-emerald-400 font-bold">Automatizado</span>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <aside class="w-full md:w-72 bg-slate-50 p-4 border-r border-gray-200 flex flex-col gap-5 overflow-y-auto shadow-sm">
+            
+            <div class="bg-slate-800 text-white p-3.5 rounded-xl shadow-md border border-slate-700">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center">
+                        <span class="mr-1.5">🛠️</span> Asignación Rápida
+                    </h3>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="chk-modo-mapeo" onchange="conmutarModoMapeo()" class="sr-only peer">
+                        <div class="w-8 h-4 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+                <p class="text-[11px] text-slate-400 mb-2 leading-tight">Activa para nombrar lotes en serie haciendo clics consecutivos sobre el plano.</p>
+                <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-700 hidden">
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Manzana</label>
+                        <input id="map-mza" type="text" value="A" class="w-full bg-slate-700 border border-slate-600 rounded p-1 text-xs text-center font-bold text-white uppercase">
+                    </div>
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Siguiente Lote</label>
+                        <input id="map-nro" type="number" value="1" class="w-full bg-slate-700 border border-slate-600 rounded p-1 text-xs text-center font-bold text-white">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">Resumen del Proyecto</h3>
+                <div class="grid grid-cols-1 gap-1.5">
+                    <div class="bg-white p-2.5 rounded-xl border border-gray-200 flex justify-between items-center shadow-xs">
+                        <span class="text-xs text-gray-600 font-medium">Total Lotes (Comerciales)</span>
+                        <span id="resumen-total" class="text-base font-black text-slate-800">0</span>
+                    </div>
+                    <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 flex justify-between items-center shadow-xs">
+                        <span class="text-xs text-emerald-800 font-semibold">Lotes Ocupados / Vendidos</span>
+                        <span id="resumen-vendidos" class="text-base font-black text-emerald-700">0</span>
+                    </div>
+                    <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-100 flex justify-between items-center shadow-xs">
+                        <span class="text-xs text-blue-800 font-semibold">Lotes Libres / Disponibles</span>
+                        <span id="resumen-libres" class="text-base font-black text-blue-700">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-xs">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
+                    <span class="mr-1.5">💾</span> Herramientas Globales
+                </h3>
+                <button onclick="exportarBaseDatosCSV()" class="w-full bg-slate-700 hover:bg-emerald-600 text-white font-bold py-2 px-3 rounded-lg shadow-xs transition-colors flex justify-center items-center space-x-2 cursor-pointer text-xs">
+                    <span>📊</span> <span>Exportar Datos (Excel / CSV)</span>
+                </button>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Filtros de Visualización</h3>
+                <div class="space-y-1">
+                    <button onclick="filtrarMapa('todos')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-300 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-slate-400 rounded-full mr-2"></span> Mostrar Todos</span>
+                        <span id="count-todos" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('disponible')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 border border-gray-400 bg-white rounded-full mr-2"></span> Libres / Disponibles</span>
+                        <span id="count-disponible" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('reservado')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-sky-300 rounded-full mr-2"></span> Reservados (Con Seña)</span>
+                        <span id="count-reservado" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('al_dia')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-emerald-400 rounded-full mr-2"></span> Al Día</span>
+                        <span id="count-al_dia" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('en_mora')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-rose-400 rounded-full mr-2"></span> En Mora</span>
+                        <span id="count-en_mora" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('con_problemas')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-red-600 rounded-full mr-2"></span> Con Problemas</span>
+                        <span id="count-con_problemas" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('transferido')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-violet-400 rounded-full mr-2"></span> Transferido y Titulado</span>
+                        <span id="count-transferido" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('ocupacion')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-orange-600 rounded-full mr-2"></span> Ocupación</span>
+                        <span id="count-ocupacion" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('recuperado')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-yellow-200 border border-yellow-400 rounded-full mr-2"></span> En Recuperación</span>
+                        <span id="count-recuperado" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('plaza')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></span> Plazas / Áreas Verdes</span>
+                        <span id="count-plaza" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button onclick="filtrarMapa('reserva')" class="w-full flex items-center justify-between p-2 bg-white border border-gray-200 text-xs font-medium text-slate-700 rounded-lg cursor-pointer">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 bg-green-800 rounded-full mr-2"></span> Reservas Propietario</span>
+                        <span id="count-reserva" class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="flex-1 bg-white p-6 flex flex-col items-center justify-center overflow-auto border-r border-gray-200">
+            <div id="contenedor-svg" class="w-full h-full max-w-[400px] flex items-center justify-center">
+                <div class="text-center text-gray-400 py-12">
+                    <p class="text-base animate-pulse">Cargando plano vectorial...</p>
+                </div>
+            </div>
+        </main>
+
+        <aside class="w-full md:w-96 bg-gray-50 p-5 flex flex-col justify-between overflow-y-auto shadow-xl">
+            <div>
+                <h2 class="text-base font-bold text-slate-800 mb-3 border-b pb-2 flex items-center">
+                    <span class="mr-2">📋</span> Ficha de Registro de Lote
+                </h2>
+                
+                <div id="info-vacia" class="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl bg-white">
+                    <p class="text-3xl mb-2">🖱️</p>
+                    <p class="text-sm px-4 font-medium">Haz clic sobre cualquier cuadro del plano para ver sus datos.</p>
+                </div>
+
+                <div id="info-lote" class="hidden space-y-3">
+                    
+                    <div class="bg-white p-3 rounded-xl shadow-xs border border-gray-200">
+                        <span id="det-id" class="hidden"></span>
+
+                        <div class="mb-3 flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span class="text-[10px] uppercase font-black text-slate-500 tracking-wider">Estado de Lote</span>
+                            <span id="badge-estado-calculado" class="inline-block px-2.5 py-0.5 rounded text-xs font-black shadow-xs uppercase">---</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                                <label class="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Manzana</label>
+                                <input id="form-mza" type="text" placeholder="Ej: A" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Lote N°</label>
+                                <input id="form-nro" type="text" placeholder="Ej: 03" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div id="seccion-cliente" class="mt-3 pt-2.5 border-t border-gray-100 space-y-1">
+                            <label id="lbl-cliente" class="text-[10px] font-bold text-slate-500 uppercase block">Nombre del Comprador</label>
+                            <input id="form-cliente" type="text" placeholder="Nombre completo del titular" oninput="calcularCamposAutomaticos()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-xl shadow-xs border border-gray-200">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Destino / Uso del Lote</label>
+                        <select id="form-tipo-lote" onchange="alternarCamposPorTipo()" class="w-full bg-gray-100 border border-gray-300 font-bold rounded-lg p-2 text-xs text-slate-800 focus:outline-none">
+                            <option value="comercial">💼 Lote Comercial (Venta / Crédito)</option>
+                            <option value="reservado">🔹 Reservado (Entrega de Seña)</option>
+                            <option value="transferido">📜 Transferido y Titulado</option>
+                            <option value="recuperado">♻️ En Recuperación</option>
+                            <option value="plaza">🌳 Plaza / Espacio Verde Público</option>
+                            <option value="reserva">🚧 Reserva del Propietario</option>
+                            <option value="ocupacion">⚠️ Ocupación (Ocupado de hecho)</option>
+                        </select>
+                    </div>
+
+                    <div id="seccion-reserva" class="bg-white p-3 rounded-xl shadow-xs border border-gray-200 space-y-2.5 hidden">
+                        <div class="text-[11px] font-bold text-sky-700 uppercase border-b pb-1">Condiciones de la Reserva</div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">Nombre del Interesado</label>
+                            <input id="form-reserva-nombre" type="text" placeholder="Nombre de quien reserva" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-semibold focus:outline-none focus:bg-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-500 block mb-0.5">Monto de Seña</label>
+                                <input id="form-reserva-monto" type="number" placeholder="Gs." class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold focus:outline-none focus:bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 block mb-0.5">Vencimiento Reserva</label>
+                                <input id="form-reserva-fecha-fin" type="date" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-1.5 text-xs focus:outline-none focus:bg-white">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="seccion-financiera" class="bg-white p-3 rounded-xl shadow-xs border border-gray-200 space-y-2.5">
+                        <div class="text-[11px] font-bold text-slate-400 uppercase border-b pb-1">Condiciones del Crédito</div>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-500 block mb-0.5">Plazo (Cuotas)</label>
+                                <input id="form-cant-cuotas" type="number" placeholder="Ej: 120" oninput="calcularCamposAutomaticos()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 block mb-0.5">Monto de Cuota</label>
+                                <input id="form-monto-cuota" type="number" placeholder="Gs." oninput="calcularCamposAutomaticos()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-emerald-700 font-bold block mb-0.5">N° Cuotas Pagadas Hoy</label>
+                                <input id="form-cuota-actual" type="number" placeholder="Ej: 12" oninput="calcularCamposAutomaticos()" class="w-full bg-emerald-50 border border-emerald-300 font-bold text-emerald-900 rounded-lg p-2 text-xs focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 font-bold block mb-0.5">Valor Total del Lote</label>
+                                <input id="form-monto-total" type="text" readonly placeholder="Calculado" class="w-full bg-gray-100 border border-gray-200 text-gray-700 font-bold rounded-lg p-2 text-xs cursor-not-allowed">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                                <label class="text-[10px] text-slate-500 block mb-0.5">Fecha Firma Contrato</label>
+                                <input id="form-fecha-inicio" type="month" onchange="calcularCamposAutomaticos()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-1.5 text-xs focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-0.5">Mes Fin Contrato (Auto)</label>
+                                <input id="form-fecha-fin" type="month" readonly class="w-full bg-gray-100 border border-gray-200 rounded-lg p-1.5 text-xs cursor-not-allowed text-gray-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-acciones" class="hidden mt-4 pt-3 border-t border-gray-200 space-y-2">
+                <button id="btn-editar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow transition-colors flex justify-center items-center space-x-2 cursor-pointer text-sm">
+                    <span>✏️</span> <span>Modificar Datos</span>
+                </button>
+                
+                <div id="controles-edicion-activa" class="hidden space-y-2">
+                    <button id="btn-guardar" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl shadow transition-colors flex justify-center items-center space-x-2 cursor-pointer text-sm">
+                        <span>💾</span> <span>Guardar Cambios</span>
+                    </button>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="borrarTodosLosCampos()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-1 rounded-lg transition-colors text-xs text-center cursor-pointer flex items-center justify-center space-x-1 shadow-xs">
+                            <span>🗑️</span> <span>Borrar Campos</span>
+                        </button>
+                        <button type="button" onclick="ponerEnRecuperacion()" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-1 rounded-lg transition-colors text-xs text-center cursor-pointer flex items-center justify-center space-x-1 shadow-xs">
+                            <span>♻️</span> <span>Recuperación</span>
+                        </button>
+                    </div>
+
+                    <button id="btn-cancelar" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-xl transition-colors text-xs text-center block cursor-pointer">
+                        ❌ Cancelar y Bloquear
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        let baseDatosLotes = JSON.parse(localStorage.getItem('bd_lotes_cambyreta')) || {};
+
+        const coloresRelleno = {
+            "disponible": "#ffffff", 
+            "al_dia": "#34d399", 
+            "en_mora": "#f43f5e", 
+            "con_problemas": "#dc2626", 
+            "ocupacion": "#ea580c", 
+            "plaza": "#22c55e", 
+            "reserva": "#15803d",
+            "recuperado": "#fef08a",
+            "reservado": "#7dd3fc",    // Azul Claro para Lotes Reservados con Seña
+            "transferido": "#a78bfa"   // Violeta para Lotes Totalmente Pagados y Titulados
+        };
+
+        const textosEstados = {
+            "disponible": "Disponible", "al_dia": "Al Día", "en_mora": "En Mora",
+            "con_problemas": "Con Problemas", "ocupacion": "Ocupación", "plaza": "Plaza", 
+            "reserva": "Reserva Prop.", "recuperado": "En Recuperación",
+            "reservado": "Reservado (Seña)", "transferido": "Transferido y Titulado"
+        };
+
+        let loteSeleccionadoActual = null;
+        let filtroActivoActual = "todos";
+        let modoMapeoActivo = false;
+
+        fetch('LOTES CAMBYRETA.svg')
+            .then(response => { if (!response.ok) throw new Error(); return response.text(); })
+            .then(svgText => {
+                document.getElementById('contenedor-svg').innerHTML = svgText;
+                prepararGeometriasSVG();
+                calcularMetricasYFiltros();
+            })
+            .catch(() => {
+                document.getElementById('contenedor-svg').innerHTML = `
+                    <div class="text-center text-rose-500 text-xs p-4 bg-rose-50 border border-rose-200 rounded-xl">
+                        Error al cargar el plano. Verifica el nombre exacto del archivo SVG.
+                    </div>`;
+            });
+
+        function analizarAtributosElementoCAD(elemento) {
+            const poolTextos = [
+                elemento.id || "",
+                elemento.getAttribute('name') || "",
+                elemento.getAttribute('data-name') || "",
+                elemento.getAttribute('inkscape:label') || ""
+            ].map(t => t.toUpperCase().trim());
+
+            for (let texto of poolTextos) {
+                if (!texto || texto.includes("VECTOR-AUTO")) continue;
+
+                const matchCompleto = texto.match(/(?:MZA|MANZANA|MANZ)\s*([A-Z])?.*(?:LTE|LOTE)?\s*(\d+)/);
+                if (matchCompleto) {
+                    return { mza: matchCompleto[1] || "", nro: matchCompleto[2].padStart(2, '0') };
+                }
+
+                const matchDirecto = texto.match(/^([A-Z])[-_]?(\d+)$/);
+                if (matchDirecto) {
+                    return { mza: matchDirecto[1], nro: matchDirecto[2].padStart(2, '0') };
+                }
+            }
+            return null;
+        }
+
+        function conmutarModoMapeo() {
+            modoMapeoActivo = document.getElementById('chk-modo-mapeo').checked;
+            const controles = document.getElementById('controles-mapeo');
+            if (modoMapeoActivo) {
+                controles.classList.remove('hidden');
+                quitarBordesSeleccion();
+                document.getElementById('info-lote').classList.add('hidden');
+                document.getElementById('panel-acciones').classList.add('hidden');
+                document.getElementById('info-vacia').classList.remove('hidden');
+                document.getElementById('info-vacia').innerHTML = `<p class="text-2xl mb-1">⚡ Modo Asignación Activo</p><p class="text-xs px-4">Haz clics ordenados en los lotes del plano para numerarlos instantáneamente.</p>`;
+            } else {
+                controles.classList.add('hidden');
+                document.getElementById('info-vacia').innerHTML = `<p class="text-3xl mb-2">🖱️</p><p class="text-sm px-4 font-medium">Haz clic sobre cualquier cuadro del plano para ver sus datos.</p>`;
+            }
+        }
+
+        function prepararGeometriasSVG() {
+            const contenedor = document.getElementById('contenedor-svg');
+            const figuras = contenedor.querySelectorAll('rectangle, polygon, path, rect');
+            
+            figuras.forEach((elemento, indice) => {
+                if (!elemento.id) elemento.id = `vector-auto-${indice + 1}`;
+                const idReal = elemento.id;
+
+                if (!baseDatosLotes[idReal]) {
+                    const datosDetectados = analizarAtributosElementoCAD(elemento);
+                    if (datosDetectados) {
+                        baseDatosLotes[idReal] = {
+                            mza: datosDetectados.mza,
+                            nro: datosDetectados.nro,
+                            tipo: "comercial",
+                            estado: "disponible",
+                            cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
+                            reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
+                        };
+                    }
+                }
+
+                if (baseDatosLotes[idReal]) {
+                    elemento.style.fill = coloresRelleno[baseDatosLotes[idReal].estado] || coloresRelleno["disponible"];
+                } else {
+                    elemento.style.fill = coloresRelleno["disponible"];
+                }
+
+                elemento.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    if (modoMapeoActivo) {
+                        const mzaAsig = document.getElementById('map-mza').value.toUpperCase().trim();
+                        const nroAsig = parseInt(document.getElementById('map-nro').value) || 1;
+
+                        baseDatosLotes[idReal] = {
+                            mza: mzaAsig,
+                            nro: String(nroAsig).padStart(2, '0'),
+                            tipo: "comercial",
+                            estado: "disponible",
+                            cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
+                            reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
+                        };
+
+                        elemento.style.fill = coloresRelleno["disponible"];
+                        localStorage.setItem('bd_lotes_cambyreta', JSON.stringify(baseDatosLotes));
+                        
+                        document.getElementById('map-nro').value = nroAsig + 1;
+                        
+                        calcularMetricasYFiltros();
+                        abrirFichaLote(idReal); 
+                        return;
+                    }
+
+                    abrirFichaLote(idReal);
+                });
+            });
+            localStorage.setItem('bd_lotes_cambyreta', JSON.stringify(baseDatosLotes));
+        }
+
+        function abrirFichaLote(idReal) {
+            if (modoMapeoActivo) return;
+            loteSeleccionadoActual = idReal;
+            quitarBordesSeleccion();
+            
+            const elementoSvg = document.getElementById(idReal);
+            if (elementoSvg) {
+                elementoSvg.style.stroke = "#000000";
+                elementoSvg.style.strokeWidth = "35px";
+            }
+
+            if (!baseDatosLotes[idReal]) {
+                baseDatosLotes[idReal] = {
+                    mza: "", nro: "", tipo: "comercial", estado: "disponible", 
+                    cliente: "", cantCuotas: 0, montoCuota: 0, cuotaActual: 0, fechaInicio: "",
+                    reservaNombre: "", reservaMonto: 0, reservaFechaFin: ""
+                };
+            }
+
+            const datos = baseDatosLotes[idReal];
+
+            document.getElementById('info-vacia').classList.add('hidden');
+            document.getElementById('info-lote').classList.remove('hidden');
+            document.getElementById('panel-acciones').classList.remove('hidden');
+
+            document.getElementById('det-id').innerText = idReal;
+            document.getElementById('form-mza').value = datos.mza;
+            document.getElementById('form-nro').value = datos.nro;
+            document.getElementById('form-tipo-lote').value = datos.tipo || "comercial";
+            document.getElementById('form-cliente').value = datos.cliente || "";
+            document.getElementById('form-cant-cuotas').value = datos.cantCuotas || "";
+            document.getElementById('form-monto-cuota').value = datos.montoCuota || "";
+            document.getElementById('form-cuota-actual').value = datos.cuotaActual || "";
+            document.getElementById('form-fecha-inicio').value = datos.fechaInicio || "";
+            
+            // Cargar datos de Reserva
+            document.getElementById('form-reserva-nombre').value = datos.reservaNombre || "";
+            document.getElementById('form-reserva-monto').value = datos.reservaMonto || "";
+            document.getElementById('form-reserva-fecha-fin').value = datos.reservaFechaFin || "";
+
+            alternarCamposPorTipo();
+            setFormEditable(false); 
+        }
+
+        function setFormEditable(isEditable) {
+            const campos = [
+                'form-mza', 'form-nro', 'form-tipo-lote', 'form-cliente', 
+                'form-cant-cuotas', 'form-monto-cuota', 'form-cuota-actual', 'form-fecha-inicio',
+                'form-reserva-nombre', 'form-reserva-monto', 'form-reserva-fecha-fin'
+            ];
+            
+            campos.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = !isEditable;
+            });
+
+            if (isEditable) {
+                document.getElementById('btn-editar').classList.add('hidden');
+                document.getElementById('controles-edicion-activa').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-editar').classList.remove('hidden');
+                document.getElementById('controles-edicion-activa').classList.add('hidden');
+            }
+        }
+
+        function alternarCamposPorTipo() {
+            const tipo = document.getElementById('form-tipo-lote').value;
+            const seccionCliente = document.getElementById('seccion-cliente');
+            const seccionFinanciera = document.getElementById('seccion-financiera');
+            const seccionReserva = document.getElementById('seccion-reserva');
+            const lblCliente = document.getElementById('lbl-cliente');
+
+            // Ocultar paneles por defecto
+            seccionCliente.classList.add('hidden');
+            seccionFinanciera.classList.add('hidden');
+            seccionReserva.classList.add('hidden');
+
+            if (tipo === 'comercial') {
+                lblCliente.innerText = "Nombre del Comprador";
+                seccionCliente.classList.remove('hidden');
+                seccionFinanciera.classList.remove('hidden');
+            } else if (tipo === 'reservado') {
+                seccionReserva.classList.remove('hidden');
+            } else if (tipo === 'transferido') {
+                lblCliente.innerText = "Propietario Titulado";
+                seccionCliente.classList.remove('hidden'); // Solo requiere el nombre del titular
+            }
+            calcularCamposAutomaticos();
+        }
+
+        function calcularCamposAutomaticos() {
+            const tipo = document.getElementById('form-tipo-lote').value;
+            const cliente = document.getElementById('form-cliente').value.trim();
+            const cantCuotas = parseInt(document.getElementById('form-cant-cuotas').value) || 0;
+            const montoCuota = parseFloat(document.getElementById('form-monto-cuota').value) || 0;
+            const cuotaActual = parseInt(document.getElementById('form-cuota-actual').value) || 0;
+            const fechaInicioVal = document.getElementById('form-fecha-inicio').value;
+
+            let estadoCalculado = "disponible";
+
+            if (tipo === 'plaza') estadoCalculado = 'plaza';
+            else if (tipo === 'reserva') estadoCalculado = 'reserva';
+            else if (tipo === 'ocupacion') estadoCalculado = 'ocupacion';
+            else if (tipo === 'recuperado') estadoCalculado = 'recuperado';
+            else if (tipo === 'reservado') estadoCalculado = 'reservado';
+            else if (tipo === 'transferido') estadoCalculado = 'transferido';
+            else if (!cliente) {
+                estadoCalculado = 'disponible';
+            } 
+            else if (fechaInicioVal && cantCuotas > 0) {
+                // CONDICIÓN AUTOMÁTICA: Si ya pagó todo el terreno, pasa a Transferido y Titulado
+                if (cuotaActual >= cantCuotas) {
+                    estadoCalculado = "transferido";
+                } else {
+                    const hoy = new Date();
+                    const [year, month] = fechaInicioVal.split('-').map(Number);
+                    const mesesTranscurridos = (hoy.getFullYear() - year) * 12 + ((hoy.getMonth() + 1) - month);
+                    const cuotasTeoricas = Math.max(0, Math.min(cantCuotas, mesesTranscurridos));
+                    
+                    const diferenciaGaps = cuotasTeoricas - cuotaActual;
+
+                    if (diferenciaGaps <= 0) estadoCalculado = "al_dia";
+                    else if (diferenciaGaps === 1 || diferenciaGaps === 2) estadoCalculado = "en_mora";
+                    else if (diferenciaGaps >= 3) estadoCalculado = "con_problemas";
+                }
+            } else {
+                estadoCalculado = "al_dia";
+            }
+
+            const badge = document.getElementById('badge-estado-calculado');
+            if (badge) {
+                badge.innerText = textosEstados[estadoCalculado];
+                badge.style.backgroundColor = coloresRelleno[estadoCalculado];
+                // Ajustar contraste de texto
+                if (estadoCalculado === 'disponible' || estadoCalculado === 'recuperado' || estadoCalculado === 'reservado') {
+                    badge.style.color = '#1e293b';
+                } else {
+                    badge.style.color = '#ffffff';
+                }
+            }
+
+            if (cantCuotas > 0 && montoCuota > 0) {
+                document.getElementById('form-monto-total').value = (cantCuotas * montoCuota).toLocaleString('es-PY') + " Gs.";
+            } else {
+                document.getElementById('form-monto-total').value = "";
+            }
+
+            if (fechaInicioVal && cantCuotas > 0) {
+                const [y, m] = fechaInicioVal.split('-').map(Number);
+                const fechaFin = new Date(y, m - 1 + cantCuotas, 1);
+                const mm = String(fechaFin.getMonth() + 1).padStart(2, '0');
+                document.getElementById('form-fecha-fin').value = `${fechaFin.getFullYear()}-${mm}`;
+            } else {
+                document.getElementById('form-fecha-fin').value = "";
+            }
+
+            return estadoCalculado;
+        }
+
+        function borrarTodosLosCampos() {
+            if (!confirm("¿Está seguro de que desea vaciar las condiciones de este lote?")) return;
+            document.getElementById('form-tipo-lote').value = "comercial";
+            document.getElementById('form-cliente').value = "";
+            document.getElementById('form-cant-cuotas').value = "";
+            document.getElementById('form-monto-cuota').value = "";
+            document.getElementById('form-cuota-actual').value = "";
+            document.getElementById('form-fecha-inicio').value = "";
+            document.getElementById('form-reserva-nombre').value = "";
+            document.getElementById('form-reserva-monto').value = "";
+            document.getElementById('form-reserva-fecha-fin').value = "";
+            alternarCamposPorTipo();
+        }
+
+        function ponerEnRecuperacion() {
+            document.getElementById('form-tipo-lote').value = "recuperado";
+            alternarCamposPorTipo();
+        }
+
+        function quitarBordesSeleccion() {
+            document.querySelectorAll('#contenedor-svg rectangle, #contenedor-svg polygon, #contenedor-svg path, #contenedor-svg rect').forEach(f => {
+                f.style.stroke = ""; f.style.strokeWidth = "";
+            });
+        }
+
+        document.getElementById('btn-editar').addEventListener('click', () => { setFormEditable(true); });
+        document.getElementById('btn-cancelar').addEventListener('click', () => { if (loteSeleccionadoActual) abrirFichaLote(loteSeleccionadoActual); });
+
+        document.getElementById('btn-guardar').addEventListener('click', () => {
+            if (!loteSeleccionadoActual) return;
+
+            const estadoFinal = calcularCamposAutomaticos();
+            const d = baseDatosLotes[loteSeleccionadoActual];
+            
+            d.mza = document.getElementById('form-mza').value.toUpperCase().trim();
+            d.nro = document.getElementById('form-nro').value.trim();
+            d.tipo = document.getElementById('form-tipo-lote').value;
+            d.estado = estadoFinal;
+            
+            if (d.tipo === 'comercial') {
+                d.cliente = document.getElementById('form-cliente').value.trim();
+                d.cantCuotas = parseInt(document.getElementById('form-cant-cuotas').value) || 0;
+                d.montoCuota = parseFloat(document.getElementById('form-monto-cuota').value) || 0;
+                d.cuotaActual = parseInt(document.getElementById('form-cuota-actual').value) || 0;
+                d.fechaInicio = document.getElementById('form-fecha-inicio').value;
+                d.reservaNombre = ""; d.reservaMonto = 0; d.reservaFechaFin = "";
+            } else if (d.tipo === 'reservado') {
+                d.reservaNombre = document.getElementById('form-reserva-nombre').value.trim();
+                d.reservaMonto = parseFloat(document.getElementById('form-reserva-monto').value) || 0;
+                d.reservaFechaFin = document.getElementById('form-reserva-fecha-fin').value;
+                d.cliente = "RESERVA: " + d.reservaNombre;
+                d.cantCuotas = 0; d.montoCuota = 0; d.cuotaActual = 0; d.fechaInicio = "";
+            } else if (d.tipo === 'transferido') {
+                d.cliente = document.getElementById('form-cliente').value.trim();
+                d.cantCuotas = 0; d.montoCuota = 0; d.cuotaActual = 0; d.fechaInicio = "";
+                d.reservaNombre = ""; d.reservaMonto = 0; d.reservaFechaFin = "";
+            } else {
+                d.cliente = (d.tipo === 'plaza') ? "USO MUNICIPAL / PLAZA" : 
+                            (d.tipo === 'reserva') ? "RESERVA PROPIETARIO" : 
+                            (d.tipo === 'recuperado') ? "LOTE EN RECUPERACIÓN" : "OCUPACIÓN DE HECHO";
+                d.cantCuotas = 0; d.montoCuota = 0; d.cuotaActual = 0; d.fechaInicio = "";
+                d.reservaNombre = ""; d.reservaMonto = 0; d.reservaFechaFin = "";
+            }
+
+            const el = document.getElementById(loteSeleccionadoActual);
+            if (el) el.style.fill = coloresRelleno[estadoFinal];
+
+            localStorage.setItem('bd_lotes_cambyreta', JSON.stringify(baseDatosLotes));
+
+            calcularMetricasYFiltros();
+            filtrarMapa(filtroActivoActual);
+            setFormEditable(false); 
+        });
+
+        function calcularMetricasYFiltros() {
+            const figuras = document.querySelectorAll('#contenedor-svg rectangle, #contenedor-svg polygon, #contenedor-svg path, #contenedor-svg rect');
+            
+            let totalValidos = 0;
+            let libresValidos = 0;
+            let ocupadosValidos = 0;
+
+            let disponibles = 0, al_dia = 0, en_mora = 0, con_problemas = 0, ocupacion = 0, plaza = 0, reserva = 0, recuperado = 0, reservado = 0, transferido = 0;
+
+            figuras.forEach(f => {
+                const datos = baseDatosLotes[f.id];
+                const estado = datos ? datos.estado : "disponible";
+                
+                const esLoteValido = datos && 
+                                     datos.mza && datos.mza.trim() !== "" && 
+                                     datos.nro && datos.nro.trim() !== "";
+
+                if (esLoteValido) {
+                    if (estado === "disponible") disponibles++;
+                    if (estado === "al_dia") al_dia++;
+                    if (estado === "en_mora") en_mora++;
+                    if (estado === "con_problemas") con_problemas++;
+                    if (estado === "ocupacion") ocupacion++;
+                    if (estado === "plaza") plaza++;
+                    if (estado === "reserva") reserva++;
+                    if (estado === "recuperado") recuperado++;
+                    if (estado === "reservado") reservado++;
+                    if (estado === "transferido") transferido++;
+
+                    // No computar áreas comunes institucionales o reservas del dueño en métricas comerciales fijas
+                    if (estado !== "plaza" && estado !== "reserva" && estado !== "recuperado") {
+                        totalValidos++;
+                        if (estado === "disponible" || estado === "reservado") {
+                            libresValidos++; // Todavía se pueden comercializar/cerrar
+                        } else {
+                            ocupadosValidos++; // Vendidos, en mora o ya titulados
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('resumen-total').innerText = totalValidos;
+            document.getElementById('resumen-libres').innerText = libresValidos;
+            document.getElementById('resumen-vendidos').innerText = ocupadosValidos;
+
+            document.getElementById('count-todos').innerText = totalValidos;
+            document.getElementById('count-disponible').innerText = disponibles;
+            document.getElementById('count-reservado').innerText = reservado;
+            document.getElementById('count-al_dia').innerText = al_dia;
+            document.getElementById('count-en_mora').innerText = en_mora;
+            document.getElementById('count-con_problemas').innerText = con_problemas;
+            document.getElementById('count-transferido').innerText = transferido;
+            document.getElementById('count-ocupacion').innerText = ocupacion;
+            document.getElementById('count-plaza').innerText = plaza;
+            document.getElementById('count-reserva').innerText = reserva;
+            document.getElementById('count-recuperado').innerText = recuperado;
+        }
+
+        function filtrarMapa(f) {
+            filtroActivoActual = f;
+            document.querySelectorAll('#contenedor-svg rectangle, #contenedor-svg polygon, #contenedor-svg path, #contenedor-svg rect').forEach(fig => {
+                const datos = baseDatosLotes[fig.id];
+                const estado = datos ? datos.estado : "disponible";
+                
+                const esLoteValido = datos && 
+                                     datos.mza && datos.mza.trim() !== "" && 
+                                     datos.nro && datos.nro.trim() !== "";
+
+                if (!esLoteValido) {
+                    fig.style.opacity = "0.15";
+                } else {
+                    if (f === "todos") {
+                        fig.style.opacity = (estado === "plaza" || estado === "reserva" || estado === "recuperado") ? "0.15" : "1";
+                    } else {
+                        fig.style.opacity = (estado === f) ? "1" : "0.15";
+                    }
+                }
+            });
+        }
+
+        function exportarBaseDatosCSV() {
+            const listaLotes = [];
+            for (const idVectorial in baseDatosLotes) {
+                const item = baseDatosLotes[idVectorial];
+                if (item.mza && item.nro) {
+                    listaLotes.push(item);
+                }
+            }
+
+            if (listaLotes.length === 0) {
+                alert("No hay lotes configurados en el sistema para exportar.");
+                return;
+            }
+
+            listaLotes.sort((a, b) => {
+                const mzaA = a.mza.toUpperCase();
+                const mzaB = b.mza.toUpperCase();
+                if (mzaA !== mzaB) return mzaA.localeCompare(mzaB);
+                
+                const nroA = parseInt(a.nro) || 0;
+                const nroB = parseInt(b.nro) || 0;
+                return nroA - nroB;
+            });
+
+            let contenidoCSV = "\uFEFF"; 
+            contenidoCSV += "Manzana,Lote Nro,Uso / Destino,Estado Comercial,Nombre del Propietario/Reservante,Plazo (Cuotas),Monto Cuota (Gs),Cuotas Pagadas Hoy,Valor Total (Gs),Fecha Contrato,Fin Contrato,Seña Reserva (Gs),Vence Reserva\n";
+
+            listaLotes.forEach(lote => {
+                const mza = `"${lote.mza}"`;
+                const nro = `"${lote.nro}"`;
+                const tipo = `"${lote.tipo ? lote.tipo.toUpperCase() : 'COMERCIAL'}"`;
+                const estado = `"${textosEstados[lote.estado] || lote.estado}"`;
+                
+                // Determinar el nombre a mostrar en el listado
+                let titular = lote.cliente || "";
+                if (lote.estado === 'reservado') titular = lote.reservaNombre || "";
+
+                const propietario = `"${titular.replace(/"/g, '""')}"`;
+                const plazo = lote.cantCuotas || 0;
+                const valorCuota = lote.montoCuota || 0;
+                const pagadas = lote.cuotaActual || 0;
+                const valorTotal = plazo * valorCuota;
+                const fechaInicio = `"${lote.fechaInicio || ''}"`;
+
+                let fechaFin = "";
+                if (lote.fechaInicio && plazo > 0) {
+                    const [y, m] = lote.fechaInicio.split('-').map(Number);
+                    const fFin = new Date(y, m - 1 + plazo, 1);
+                    const mm = String(fFin.getMonth() + 1).padStart(2, '0');
+                    fechaFin = `${fFin.getFullYear()}-${mm}`;
+                }
+                fechaFin = `"${fechaFin}"`;
+
+                const seña = lote.reservaMonto || 0;
+                const venceReserva = `"${lote.reservaFechaFin || ''}"`;
+
+                contenidoCSV += `${mza},${nro},${tipo},${estado},${propietario},${plazo},${valorCuota},${pagadas},${valorTotal},${fechaInicio},${fechaFin},${seña},${venceReserva}\n`;
+            });
+
+            const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+            const linkDescarga = document.createElement("a");
+            linkDescarga.href = URL.createObjectURL(blob);
+            linkDescarga.setAttribute("download", "LOTEAMIENTO_CAMBYRETA_BD.csv");
+            document.body.appendChild(linkDescarga);
+            linkDescarga.click();
+            document.body.removeChild(linkDescarga);
+        }
+    </script>
+</body>
+</html>

@@ -53,8 +53,10 @@
             <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
             <h1 class="text-base sm:text-xl font-bold tracking-wider text-center sm:text-left">GESTION LOTEAMIENTO CAMBYRETA</h1>
         </div>
-        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300">
-            Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span>
+        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300 flex items-center space-x-2">
+            <span>Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span></span>
+            <span class="text-slate-500">|</span>
+            <span>Online: <span id="usuarios-online" class="text-cyan-400 font-bold">1</span> 👥</span>
         </div>
     </header>
 
@@ -276,13 +278,11 @@
         </aside>
     </div>
 
-    <!-- ÍCONO FLOTANTE DISCRETO DE ASIGNACIÓN RÁPIDA (ESQUINA SUPERIOR DERECHA, MOVIDO A LA IZQUIERDA) -->
     <div id="modo-mapeo-flotante" class="fixed top-4 right-16 z-50 flex flex-col items-end space-y-2">
         <button id="btn-modo-mapeo" onclick="toggleMapeo()" title="Asignación Rápida de Lotes" class="bg-white hover:bg-gray-50 text-gray-500 rounded-full w-10 h-10 flex items-center justify-center border border-gray-200 text-lg transition-colors cursor-pointer">
             🛠️
         </button>
 
-        <!-- Panel colapsable con los controles (aparece al activar el modo) -->
         <div id="panel-mapeo" class="hidden bg-white p-3.5 rounded-xl shadow-lg border border-gray-200 w-64 text-xs">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Asignación Rápida</h3>
@@ -308,7 +308,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        // SE AGREGARON: onDisconnect y push AL IMPORT DE FIREBASE
+        import { getDatabase, ref, set, onValue, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg",
@@ -323,6 +324,33 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const lotesRef = ref(db, 'lotes');
+
+        // ==========================================
+        //  LÓGICA DE PRESENCIA (USUARIOS ONLINE)
+        // ==========================================
+        const conexionesRef = ref(db, 'conexiones');
+        const conectadoInfoRef = ref(db, '.info/connected');
+
+        onValue(conectadoInfoRef, (snapshot) => {
+            if (snapshot.val() === true) {
+                // Genera una referencia única para esta pestaña activa
+                const miConexionRef = push(conexionesRef);
+
+                // Configura Firebase para borrar automáticamente este registro al cerrar la app o perder red
+                onDisconnect(miConexionRef).remove();
+
+                // Guarda la sesión activa en el servidor
+                set(miConexionRef, true);
+            }
+        });
+
+        // Escucha cambios en el nodo 'conexiones' para contar los usuarios simultáneos
+        onValue(conexionesRef, (snapshot) => {
+            const numeroOnline = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+            const elOnline = document.getElementById('usuarios-online');
+            if (elOnline) elOnline.innerText = numeroOnline;
+        });
+        // ==========================================
 
         let baseDatosLotes = {};
         let primerCargaNubeCompleta = false;
@@ -393,7 +421,6 @@
                         elemento.addEventListener('click', (e) => {
                             e.stopPropagation();
                             
-                            // CORREGIDO: variable bien escrita
                             if (modoMapeoActivo) {
                                 const mzaAsig = document.getElementById('map-mza').value.toUpperCase().trim();
                                 const nroAsig = parseInt(document.getElementById('map-nro').value) || 1;
@@ -448,15 +475,12 @@
             return null;
         }
 
-        // Control del pequeño ícono flotante
         function toggleMapeo() {
             const chk = document.getElementById('chk-modo-mapeo');
-            // Si el panel está oculto, lo abrimos y activamos el checkbox
             if (document.getElementById('panel-mapeo').classList.contains('hidden')) {
                 chk.checked = true;
                 conmutarModoMapeo();
             } else {
-                // Si está visible, lo cerramos y desactivamos
                 chk.checked = false;
                 conmutarModoMapeo();
             }

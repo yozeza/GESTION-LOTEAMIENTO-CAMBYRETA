@@ -407,59 +407,131 @@
             return estado;
         }
 
-        // IMPORTACIÓN INTELIGENTE DE PLANILLA CSV
+        // IMPORTACIÓN INTELIGENTE Y ROBUSTA DE PLANILLA CSV
         window.procesarImportacionCSV = function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            const mapMeses = { 'Ene': '01', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'May': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dic': '12' };
-
             const reader = new FileReader();
             reader.onload = function(e) {
-                const lineas = e.target.result.split('\n');
+                const contenido = e.target.result;
+                const lineas = contenido.split(/\r?\n/);
+                if (lineas.length < 2) return;
+
+                // 1. Detección automática del separador dominante regional (comas o punto y coma de Excel)
+                let separador = ',';
+                const lineaMuestra = lineas.find(l => l.trim() !== '');
+                if (lineaMuestra && lineaMuestra.includes(';')) {
+                    separador = ';';
+                }
+
+                // 2. Mapeo dinámico de índices basado en nombres de cabecera (Inmune a cambios de orden)
+                const cabecera = lineas[0].split(separador).map(s => s.trim().toLowerCase().replace(/"/g, ''));
+                
+                let idxLote = cabecera.findIndex(c => c.includes('lote'));
+                let idxFecha = cabecera.findIndex(c => c.includes('fecha'));
+                let idxCliente = cabecera.findIndex(c => c.includes('cliente'));
+                let idxCuota = cabecera.findIndex(c => c.includes('cuota') || c.includes('nro c'));
+                let idxMes = cabecera.findIndex(c => c.includes('mes'));
+                let idxMonto = cabecera.findIndex(c => c.includes('monto') || c.includes('pagado') || c.includes('liqui'));
+
+                // Fallbacks históricos en caso de que falten etiquetas explícitas
+                if (idxLote === -1) idxLote = 0;
+                if (idxFecha === -1) idxFecha = 1;
+                if (idxCliente === -1) idxCliente = 2;
+                if (idxCuota === -1) idxCuota = 3;
+                if (idxMes === -1) idxMes = 4;
+                if (idxMonto === -1) idxMonto = 6;
+
                 let actualizados = 0;
                 let liquidacionTotalBruta = 0;
 
-                // Salta el encabezado (i=1)
+                // 3. Función de normalización numérica/alfanumérica estricta
+                // Resuelve fallos de comparación por ceros a la izquierda (ej: '003' -> '3', '0016' -> '16')
+                function normalizar(valor) {
+                    if (valor === undefined || valor === null) return "";
+                    const s = String(valor).trim().toUpperCase();
+                    return /^\d+$/.test(s) ? parseInt(s, 10).toString() : s;
+                }
+
+                const mapMesesMin = { 'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12' };
+
+                // 4. Bucle de procesamiento de filas
                 for (let i = 1; i < lineas.length; i++) {
-                    const row = lineas[i].split(',').map(s => s.trim().replace(/"/g, ''));
-                    if (row.length < 7 || !row[0].includes('/')) continue;
+                    if (!lineas[i].trim()) continue;
 
-                    // Ignora código interno (ej. 206) -> Toma Manzana y Lote
-                    const partesId = row[0].split('/'); 
-                    const csvMza = partesId[1].replace(/^0+/, ''); // '003' -> '3'
-                    const csvNro = partesId[2].replace(/^0+/, ''); // '0016' -> '16'
-                    
-                    const fechaParts = row[1].split('/'); // 04/05/2026
-                    const csvFechaPago = fechaParts.length === 3 ? `${fechaParts[2]}-${fechaParts[1]}-${fechaParts[0]}` : "";
-                    
-                    const csvCliente = row[2];
-                    
-                    const cuotaParts = row[3].split('/'); // 67/130
-                    const csvCuotaActual = parseInt(cuotaParts[0]) || 0;
-                    const csvPlan = cuotaParts[1] || "130";
+                    const row = lineas[i].split(separador).map(s => s.trim().replace(/^["']|["']$/g, ''));
+                    if (row.length <= Math.max(idxLote, idxMonto)) continue;
 
-                    const mesParts = row[4].split('/'); // Abr/2026
-                    let csvMesCubierto = "";
-                    if (mesParts.length === 2 && mapMeses[mesParts[0]]) {
-                        csvMesCubierto = `${mesParts[1]}-${mapMeses[mesParts[0]]}`;
+                    const celdaLote = row[idxLote] || "";
+                    if (!celdaLote.includes('/')) continue;
+
+                    const partesId = celdaLote.split('/');
+                    if (partesId.length < 3) continue;
+
+                    // Descomposición del lote del formato de la inmobiliaria (ej: 206/003/0016)
+                    const csvMza = normalizar(partesId[1]);
+                    const csvNro = normalizar(partesId[2]);
+
+                    // Adaptador de Fechas (Soporta DD/MM/YYYY y nativo YYYY-MM-DD)
+                    const celdaFecha = row[idxFecha] || "";
+                    let csvFechaPago = "";
+                    if (celdaFecha.includes('/')) {
+                        const fechaParts = celdaFecha.split('/');
+                        if (fechaParts.length === 3) {
+                            csvFechaPago = `${fechaParts[2]}-${fechaParts[1].padStart(2, '0')}-${fechaParts[0].padStart(2, '0')}`;
+                        }
+                    } else if (celdaFecha.includes('-')) {
+                        csvFechaPago = celdaFecha;
                     }
 
-                    const csvMonto = parseFloat(row[6].replace(/\./g, '')) || 0;
+                    const csvCliente = row[idxCliente] || "";
 
-                    // Busca el lote coincidente en el mapa
+                    // Descomposición tolerante de cuotas (Soporta '67/130' o numérico aislado '67')
+                    const celdaCuota = row[idxCuota] || "";
+                    let csvCuotaActual = 0;
+                    let csvPlan = "130";
+                    if (celdaCuota.includes('/')) {
+                        const cuotaParts = celdaCuota.split('/');
+                        csvCuotaActual = parseInt(cuotaParts[0]) || 0;
+                        csvPlan = cuotaParts[1] ? cuotaParts[1].trim() : "130";
+                    } else {
+                        csvCuotaActual = parseInt(celdaCuota) || 0;
+                    }
+
+                    // Conversión Case-Insensitive de texto de meses (Soporta 'Abr/2026' y variantes)
+                    const celdaMes = row[idxMes] || "";
+                    let csvMesCubierto = "";
+                    if (celdaMes.includes('/')) {
+                        const mesParts = celdaMes.split('/');
+                        if (mesParts.length === 2) {
+                            const mesTexto = mesParts[0].trim().toLowerCase();
+                            if (mapMesesMin[mesTexto]) {
+                                csvMesCubierto = `${mesParts[1].trim()}-${mapMesesMin[mesTexto]}`;
+                            }
+                        }
+                    } else if (celdaMes.includes('-')) {
+                        csvMesCubierto = celdaMes;
+                    }
+
+                    // Limpieza profunda de formato de moneda (Remueve puntos de miles aislados de Excel)
+                    const celdaMonto = row[idxMonto] || "";
+                    let montoLimpio = celdaMonto.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                    const csvMonto = parseFloat(montoLimpio) || 0;
+
+                    // 5. Comparador Cruzado Cruzado de Lotes Normalizados
                     for (const key in baseDatosLotes) {
                         const lote = baseDatosLotes[key];
-                        const lMza = String(lote.mza).replace(/^0+/, '');
-                        const lNro = String(lote.nro).replace(/^0+/, '');
+                        const lMza = normalizar(lote.mza);
+                        const lNro = normalizar(lote.nro);
 
                         if (lMza === csvMza && lNro === csvNro) {
-                            lote.cliente = csvCliente;
+                            if (csvCliente) lote.cliente = csvCliente;
                             lote.plan = csvPlan;
                             lote.cuotaActual = csvCuotaActual;
-                            lote.mesCubierto = csvMesCubierto;
-                            lote.fechaPago = csvFechaPago;
-                            lote.montoCuota = csvMonto;
+                            if (csvMesCubierto) lote.mesCubierto = csvMesCubierto;
+                            if (csvFechaPago) lote.fechaPago = csvFechaPago;
+                            if (csvMonto > 0) lote.montoCuota = csvMonto;
                             lote.tipo = 'comercial';
                             
                             set(ref(db, 'lotes/' + key), lote);
@@ -470,7 +542,7 @@
                     }
                 }
 
-                // Cálculo Impositivo y de Liquidación Global (Notificación)
+                // Cálculo Impositivo y de Liquidación Global (Notificación Paraguaya)
                 const iva5 = liquidacionTotalBruta * (1.5 / 101.5);
                 const ire24 = (liquidacionTotalBruta - iva5) * 0.024;
                 
@@ -480,7 +552,6 @@
             reader.readAsText(file);
         };
 
-        // ... (MANTENIMIENTO DEL RESTO DE LA LÓGICA DE INTERFAZ Y EVENTOS)
         function alternarCamposPorTipo() {
             const tipo = document.getElementById('form-tipo-lote').value;
             const reqComercial = tipo === 'comercial';

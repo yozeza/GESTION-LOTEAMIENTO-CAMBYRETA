@@ -53,10 +53,8 @@
             <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
             <h1 class="text-base sm:text-xl font-bold tracking-wider text-center sm:text-left">GESTION LOTEAMIENTO CAMBYRETA</h1>
         </div>
-        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300 flex items-center space-x-2">
-            <span>Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span></span>
-            <span class="text-slate-500">|</span>
-            <span>Online: <span id="usuarios-online" class="text-cyan-400 font-bold">1</span> 👥</span>
+        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300">
+            Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span>
         </div>
     </header>
 
@@ -135,7 +133,36 @@
             </div>
         </aside>
         
-        <main class="flex-1 bg-white p-4 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 min-h-[350px]">
+        <main class="flex-1 bg-white p-4 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 min-h-[350px] relative">
+            
+            <div id="modo-mapeo-flotante" class="absolute top-4 right-4 z-20 flex flex-col items-end space-y-2">
+                <button id="btn-modo-mapeo" onclick="toggleMapeo()" title="Asignación Rápida de Lotes" class="bg-white hover:bg-gray-50 text-gray-500 rounded-full w-10 h-10 flex items-center justify-center border border-gray-200 text-lg transition-colors cursor-pointer shadow-md">
+                    🛠️
+                </button>
+
+                <div id="panel-mapeo" class="hidden bg-white p-3.5 rounded-xl shadow-lg border border-gray-200 w-64 text-xs">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Asignación Rápida</h3>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="chk-modo-mapeo" onchange="conmutarModoMapeo()" class="sr-only peer">
+                            <div class="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mb-2 leading-tight">Activa para nombrar lotes en serie tocando sobre el plano.</p>
+                    <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 hidden">
+                        <div>
+                            <label class="text-[9px] uppercase font-bold text-gray-500 block mb-0.5">Manzana</label>
+                            <input id="map-mza" type="text" value="A" class="w-full bg-gray-100 border border-gray-300 rounded p-1.5 text-xs text-center font-bold uppercase focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[9px] uppercase font-bold text-gray-500 block mb-0.5">Sig. Lote</label>
+                            <input id="map-nro" type="number" value="1" class="w-full bg-gray-100 border border-gray-300 rounded p-1.5 text-xs text-center font-bold focus:outline-none">
+                        </div>
+                    </div>
+                    <button onclick="toggleMapeo()" class="mt-2 w-full text-center text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer">Cerrar panel</button>
+                </div>
+            </div>
+
             <div id="contenedor-svg" class="w-full h-full max-w-[480px] flex items-center justify-center">
                 <div class="text-center text-gray-400 py-12">
                     <p class="text-sm animate-pulse">Cargando plano vectorial...</p>
@@ -278,38 +305,9 @@
         </aside>
     </div>
 
-    <div id="modo-mapeo-flotante" class="fixed top-4 right-16 z-50 flex flex-col items-end space-y-2">
-        <button id="btn-modo-mapeo" onclick="toggleMapeo()" title="Asignación Rápida de Lotes" class="bg-white hover:bg-gray-50 text-gray-500 rounded-full w-10 h-10 flex items-center justify-center border border-gray-200 text-lg transition-colors cursor-pointer">
-            🛠️
-        </button>
-
-        <div id="panel-mapeo" class="hidden bg-white p-3.5 rounded-xl shadow-lg border border-gray-200 w-64 text-xs">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Asignación Rápida</h3>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="chk-modo-mapeo" onchange="conmutarModoMapeo()" class="sr-only peer">
-                    <div class="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-            </div>
-            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Activa para nombrar lotes en serie tocando sobre el plano.</p>
-            <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 hidden">
-                <div>
-                    <label class="text-[9px] uppercase font-bold text-gray-500 block mb-0.5">Manzana</label>
-                    <input id="map-mza" type="text" value="A" class="w-full bg-gray-100 border border-gray-300 rounded p-1.5 text-xs text-center font-bold uppercase focus:outline-none">
-                </div>
-                <div>
-                    <label class="text-[9px] uppercase font-bold text-gray-500 block mb-0.5">Sig. Lote</label>
-                    <input id="map-nro" type="number" value="1" class="w-full bg-gray-100 border border-gray-300 rounded p-1.5 text-xs text-center font-bold focus:outline-none">
-                </div>
-            </div>
-            <button onclick="toggleMapeo()" class="mt-2 w-full text-center text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer">Cerrar panel</button>
-        </div>
-    </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        // SE AGREGARON: onDisconnect y push AL IMPORT DE FIREBASE
-        import { getDatabase, ref, set, onValue, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg",
@@ -324,33 +322,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const lotesRef = ref(db, 'lotes');
-
-        // ==========================================
-        //  LÓGICA DE PRESENCIA (USUARIOS ONLINE)
-        // ==========================================
-        const conexionesRef = ref(db, 'conexiones');
-        const conectadoInfoRef = ref(db, '.info/connected');
-
-        onValue(conectadoInfoRef, (snapshot) => {
-            if (snapshot.val() === true) {
-                // Genera una referencia única para esta pestaña activa
-                const miConexionRef = push(conexionesRef);
-
-                // Configura Firebase para borrar automáticamente este registro al cerrar la app o perder red
-                onDisconnect(miConexionRef).remove();
-
-                // Guarda la sesión activa en el servidor
-                set(miConexionRef, true);
-            }
-        });
-
-        // Escucha cambios en el nodo 'conexiones' para contar los usuarios simultáneos
-        onValue(conexionesRef, (snapshot) => {
-            const numeroOnline = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
-            const elOnline = document.getElementById('usuarios-online');
-            if (elOnline) elOnline.innerText = numeroOnline;
-        });
-        // ==========================================
 
         let baseDatosLotes = {};
         let primerCargaNubeCompleta = false;
@@ -790,7 +761,6 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
-        // Exponer funciones globales necesarias
         window.toggleMapeo = toggleMapeo;
         window.conmutarModoMapeo = conmutarModoMapeo;
         window.alternarCamposPorTipo = alternarCamposPorTipo;

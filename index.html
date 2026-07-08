@@ -53,8 +53,10 @@
             <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
             <h1 class="text-base sm:text-xl font-bold tracking-wider text-center sm:text-left">GESTION LOTEAMIENTO CAMBYRETA</h1>
         </div>
-        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300">
-            Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span>
+        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300 flex items-center gap-2">
+            <span>Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span></span>
+            <span class="text-slate-500">|</span>
+            <span>👥 <span id="usuarios-activos" class="text-sky-400 font-bold">1</span> online</span>
         </div>
     </header>
 
@@ -307,7 +309,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, set, onValue, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg",
@@ -322,6 +324,35 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const lotesRef = ref(db, 'lotes');
+
+        // --- SISTEMA DE PRESENCIA EN TIEMPO REAL ---
+        const conectividadRef = ref(db, '.info/connected');
+        const presenciaRef = ref(db, 'presencia');
+
+        // Manejar el estado de conexión de este cliente específico
+        onValue(conectividadRef, (snapshot) => {
+            if (snapshot.val() === true) {
+                // Generar un ID de sesión exclusivo para esta pestaña abierta
+                const miConexionRef = push(presenciaRef);
+                
+                // Indicarle a Firebase que borre esta sesión de forma limpia si el cliente se desconecta
+                onDisconnect(miConexionRef).remove();
+                
+                // Guardar la marca activa en la nube
+                set(miConexionRef, true);
+            }
+        });
+
+        // Escuchar el nodo global para calcular los usuarios concurrentes
+        onValue(presenciaRef, (snapshot) => {
+            const marcasActivas = snapshot.val();
+            const cantidadUsuarios = marcasActivas ? Object.keys(marcasActivas).length : 0;
+            const elementoContador = document.getElementById('usuarios-activos');
+            if (elementoContador) {
+                elementoContador.innerText = cantidadUsuarios;
+            }
+        });
+        // -------------------------------------------
 
         let baseDatosLotes = {};
         let primerCargaNubeCompleta = false;

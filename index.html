@@ -182,7 +182,7 @@
 
                         <div class="grid grid-cols-2 gap-2 border-t pt-2">
                             <div>
-                                <label class="text-[10px] text-blue-700 font-bold block mb-0.5" title="Mes que está pagando el cliente (Ej. 2026-04)">Mes Cubierto</label>
+                                <label class="text-[10px] text-blue-700 font-bold block mb-0.5" title="Mes que está pagando el cliente">Mes Cubierto</label>
                                 <input id="form-mes-cubierto" type="month" onchange="calcularCamposAutomaticos()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-1.5 text-xs font-bold focus:outline-none">
                             </div>
                             <div>
@@ -207,9 +207,20 @@
             </div>
 
             <div id="panel-acciones" class="hidden mt-4 pt-3 border-t border-gray-200 space-y-2">
-                <button id="btn-editar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition-colors">✏️ Modificar Ficha</button>
+                <button id="btn-editar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow">✏️ Modificar Ficha</button>
+                
                 <div id="controles-edicion-activa" class="hidden space-y-2">
-                    <button id="btn-guardar" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow">💾 Guardar en Nube</button>
+                    <button id="btn-guardar" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow">💾 Guardar Cambios</button>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="liberarLote()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 px-1 rounded-lg transition-colors text-xs text-center cursor-pointer flex items-center justify-center space-x-1 shadow-xs">
+                            <span>🧹</span> <span>Liberar Lote</span>
+                        </button>
+                        <button type="button" onclick="ponerEnRecuperacion()" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 px-1 rounded-lg transition-colors text-xs text-center cursor-pointer flex items-center justify-center space-x-1 shadow-xs">
+                            <span>♻️</span> <span>Recuperación</span>
+                        </button>
+                    </div>
+
                     <button id="btn-cancelar" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-xl text-xs transition-colors">❌ Cancelar Edición</button>
                 </div>
             </div>
@@ -281,13 +292,11 @@
                     if (datosNube[idReal]) {
                         baseDatosLotes[idReal] = datosNube[idReal];
                     } else if (!baseDatosLotes[idReal]) {
-                        // Auto-detección inicial (si el plano tiene datos CAD embebidos)
                         baseDatosLotes[idReal] = { mza: "", nro: "", tipo: "comercial", estado: "disponible", cliente: "", plan: "130", montoCuota: 0, cuotaActual: 0, mesCubierto: "", fechaPago: "" };
                     }
 
                     el.style.fill = coloresRelleno[baseDatosLotes[idReal].estado] || "#fff";
 
-                    // Solo asignar evento si no tiene
                     if(!el.dataset.eventoAsignado) {
                         el.dataset.eventoAsignado = "true";
                         el.addEventListener('click', (e) => {
@@ -339,7 +348,6 @@
             if(window.innerWidth < 768) document.getElementById('info-lote').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // LÓGICA CONTRACTUAL Y FINANCIERA (ESTADOS DINÁMICOS)
         function calcularCamposAutomaticos() {
             const tipo = document.getElementById('form-tipo-lote').value;
             const cliente = document.getElementById('form-cliente').value.trim();
@@ -360,27 +368,20 @@
             } else if (mesCubierto) {
                 const hoy = new Date();
                 const [yCub, mCub] = mesCubierto.split('-').map(Number);
-                // Brecha de Mora: Mes actual vs Mes que pagó
                 const mesesAtraso = (hoy.getFullYear() - yCub) * 12 + ((hoy.getMonth() + 1) - mCub);
 
-                // Brecha de Gestión: Días desde el último depósito físico
                 let mesesSinMovimiento = 0;
                 if (fechaPago) {
                     const fPago = new Date(fechaPago);
                     mesesSinMovimiento = Math.floor((hoy - fPago) / (1000 * 60 * 60 * 24 * 30));
                 }
 
-                if (mesesSinMovimiento >= 2) {
-                    estado = "falta_gestion"; // No hay depósitos recientes (Abandono)
-                } else if (mesesAtraso >= 3) {
-                    estado = "en_riesgo"; // Cliente paga pero debe > 3 meses
-                } else if (mesesAtraso > 0) {
-                    estado = "en_mora"; // Debe 1 o 2 meses
-                } else {
-                    estado = "al_dia";
-                }
+                if (mesesSinMovimiento >= 2) estado = "falta_gestion";
+                else if (mesesAtraso >= 3) estado = "en_riesgo";
+                else if (mesesAtraso > 0) estado = "en_mora";
+                else estado = "al_dia";
             } else {
-                estado = "al_dia"; // Asume al día si no hay datos de mora cargados
+                estado = "al_dia"; 
             }
 
             const badge = document.getElementById('badge-estado-calculado');
@@ -390,9 +391,8 @@
                 badge.style.color = (estado==='disponible'||estado==='en_mora'||estado==='ocupacion') ? '#000' : '#fff';
             }
 
-            // Simulador de Reparto Contractual
             if (tipo === 'comercial' && cliente && monto > 0 && cuota > 0) {
-                let percProp = 0.80; // Default: Propietario 80%, Inmo 20%
+                let percProp = 0.80; 
                 if (plan === "130" && cuota <= 19 && cuota % 2 !== 0) percProp = 0;
                 else if (plan === "65" && cuota <= 9 && cuota % 2 !== 0) percProp = 0;
                 else if (plan === "40" && cuota <= 7 && cuota % 2 !== 0) percProp = 0;
@@ -407,7 +407,7 @@
             return estado;
         }
 
-        // IMPORTACIÓN INTELIGENTE Y ROBUSTA DE PLANILLA CSV
+        // --- IMPORTACIÓN NATIVA ROBUSTA (Resuelve comillas y comas en nombres) ---
         window.procesarImportacionCSV = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -418,24 +418,38 @@
                 const lineas = contenido.split(/\r?\n/);
                 if (lineas.length < 2) return;
 
-                // 1. Detección automática del separador dominante regional (comas o punto y coma de Excel)
+                // Detectar separador (',' estándar, o ';' por Excel regional)
                 let separador = ',';
-                const lineaMuestra = lineas.find(l => l.trim() !== '');
-                if (lineaMuestra && lineaMuestra.includes(';')) {
-                    separador = ';';
+                if (lineas[0].includes(';')) separador = ';';
+
+                // Función interna para parsear una fila CSV respetando los textos entre comillas
+                function parsearFila(texto) {
+                    let resultado = [];
+                    let valor = '';
+                    let enComillas = false;
+                    for (let i = 0; i < texto.length; i++) {
+                        const char = texto[i];
+                        if (char === '"') enComillas = !enComillas;
+                        else if (char === separador && !enComillas) {
+                            resultado.push(valor.trim().replace(/^["']|["']$/g, ''));
+                            valor = '';
+                        } else valor += char;
+                    }
+                    resultado.push(valor.trim().replace(/^["']|["']$/g, ''));
+                    return resultado;
                 }
 
-                // 2. Mapeo dinámico de índices basado en nombres de cabecera (Inmune a cambios de orden)
-                const cabecera = lineas[0].split(separador).map(s => s.trim().toLowerCase().replace(/"/g, ''));
+                const cabecera = parsearFila(lineas[0]).map(s => s.toLowerCase());
                 
-                let idxLote = cabecera.findIndex(c => c.includes('lote'));
+                // Mapeo seguro de las columnas de la inmobiliaria
+                let idxLote = cabecera.findIndex(c => c === 'lote');
                 let idxFecha = cabecera.findIndex(c => c.includes('fecha'));
-                let idxCliente = cabecera.findIndex(c => c.includes('cliente'));
-                let idxCuota = cabecera.findIndex(c => c.includes('cuota') || c.includes('nro c'));
-                let idxMes = cabecera.findIndex(c => c.includes('mes'));
-                let idxMonto = cabecera.findIndex(c => c.includes('monto') || c.includes('pagado') || c.includes('liqui'));
+                let idxCliente = cabecera.findIndex(c => c === 'cliente');
+                let idxCuota = cabecera.findIndex(c => c.includes('cuota'));
+                let idxMes = cabecera.findIndex(c => c === 'mes');
+                let idxMonto = cabecera.findIndex(c => c.includes('pagado'));
 
-                // Fallbacks históricos en caso de que falten etiquetas explícitas
+                // Fallbacks si la cabecera no tiene exactamente esos nombres
                 if (idxLote === -1) idxLote = 0;
                 if (idxFecha === -1) idxFecha = 1;
                 if (idxCliente === -1) idxCliente = 2;
@@ -446,80 +460,67 @@
                 let actualizados = 0;
                 let liquidacionTotalBruta = 0;
 
-                // 3. Función de normalización numérica/alfanumérica estricta
-                // Resuelve fallos de comparación por ceros a la izquierda (ej: '003' -> '3', '0016' -> '16')
-                function normalizar(valor) {
-                    if (valor === undefined || valor === null) return "";
-                    const s = String(valor).trim().toUpperCase();
+                function normalizar(val) {
+                    if (!val) return "";
+                    const s = String(val).trim().toUpperCase();
                     return /^\d+$/.test(s) ? parseInt(s, 10).toString() : s;
                 }
 
                 const mapMesesMin = { 'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12' };
 
-                // 4. Bucle de procesamiento de filas
                 for (let i = 1; i < lineas.length; i++) {
                     if (!lineas[i].trim()) continue;
 
-                    const row = lineas[i].split(separador).map(s => s.trim().replace(/^["']|["']$/g, ''));
+                    const row = parsearFila(lineas[i]);
                     if (row.length <= Math.max(idxLote, idxMonto)) continue;
 
                     const celdaLote = row[idxLote] || "";
-                    if (!celdaLote.includes('/')) continue;
+                    if (!celdaLote.includes('/')) continue; 
 
                     const partesId = celdaLote.split('/');
                     if (partesId.length < 3) continue;
 
-                    // Descomposición del lote del formato de la inmobiliaria (ej: 206/003/0016)
                     const csvMza = normalizar(partesId[1]);
                     const csvNro = normalizar(partesId[2]);
 
-                    // Adaptador de Fechas (Soporta DD/MM/YYYY y nativo YYYY-MM-DD)
                     const celdaFecha = row[idxFecha] || "";
                     let csvFechaPago = "";
                     if (celdaFecha.includes('/')) {
-                        const fechaParts = celdaFecha.split('/');
-                        if (fechaParts.length === 3) {
-                            csvFechaPago = `${fechaParts[2]}-${fechaParts[1].padStart(2, '0')}-${fechaParts[0].padStart(2, '0')}`;
-                        }
+                        const fp = celdaFecha.split('/');
+                        if (fp.length === 3) csvFechaPago = `${fp[2]}-${fp[1].padStart(2, '0')}-${fp[0].padStart(2, '0')}`;
                     } else if (celdaFecha.includes('-')) {
                         csvFechaPago = celdaFecha;
                     }
 
                     const csvCliente = row[idxCliente] || "";
 
-                    // Descomposición tolerante de cuotas (Soporta '67/130' o numérico aislado '67')
                     const celdaCuota = row[idxCuota] || "";
                     let csvCuotaActual = 0;
                     let csvPlan = "130";
                     if (celdaCuota.includes('/')) {
-                        const cuotaParts = celdaCuota.split('/');
-                        csvCuotaActual = parseInt(cuotaParts[0]) || 0;
-                        csvPlan = cuotaParts[1] ? cuotaParts[1].trim() : "130";
+                        const cp = celdaCuota.split('/');
+                        csvCuotaActual = parseInt(cp[0]) || 0;
+                        csvPlan = cp[1] ? cp[1].trim() : "130";
                     } else {
                         csvCuotaActual = parseInt(celdaCuota) || 0;
                     }
 
-                    // Conversión Case-Insensitive de texto de meses (Soporta 'Abr/2026' y variantes)
                     const celdaMes = row[idxMes] || "";
                     let csvMesCubierto = "";
                     if (celdaMes.includes('/')) {
-                        const mesParts = celdaMes.split('/');
-                        if (mesParts.length === 2) {
-                            const mesTexto = mesParts[0].trim().toLowerCase();
-                            if (mapMesesMin[mesTexto]) {
-                                csvMesCubierto = `${mesParts[1].trim()}-${mapMesesMin[mesTexto]}`;
-                            }
+                        const mp = celdaMes.split('/');
+                        if (mp.length === 2) {
+                            const mesTexto = mp[0].trim().toLowerCase();
+                            if (mapMesesMin[mesTexto]) csvMesCubierto = `${mp[1].trim()}-${mapMesesMin[mesTexto]}`;
                         }
                     } else if (celdaMes.includes('-')) {
                         csvMesCubierto = celdaMes;
                     }
 
-                    // Limpieza profunda de formato de moneda (Remueve puntos de miles aislados de Excel)
                     const celdaMonto = row[idxMonto] || "";
                     let montoLimpio = celdaMonto.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.]/g, '');
                     const csvMonto = parseFloat(montoLimpio) || 0;
 
-                    // 5. Comparador Cruzado Cruzado de Lotes Normalizados
                     for (const key in baseDatosLotes) {
                         const lote = baseDatosLotes[key];
                         const lMza = normalizar(lote.mza);
@@ -542,12 +543,11 @@
                     }
                 }
 
-                // Cálculo Impositivo y de Liquidación Global (Notificación Paraguaya)
                 const iva5 = liquidacionTotalBruta * (1.5 / 101.5);
                 const ire24 = (liquidacionTotalBruta - iva5) * 0.024;
                 
                 alert(`✅ Planilla procesada con éxito.\nLotes actualizados en mapa: ${actualizados}\n\n📊 RESUMEN IMPOSITIVO ESTIMADO:\nRecaudación Bruta: ${liquidacionTotalBruta.toLocaleString('es-PY')} Gs.\nIVA 5%: -${iva5.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.\nRetención IRE (2.4%): -${ire24.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.`);
-                document.getElementById('import-csv').value = ""; // Reset file input
+                document.getElementById('import-csv').value = ""; 
             };
             reader.readAsText(file);
         };
@@ -568,7 +568,6 @@
                 const d = baseDatosLotes[key];
                 if (!d.mza || !d.nro) continue;
                 
-                // Recalcula estado silenciosamente para reporte
                 let est = "disponible";
                 if(d.tipo==='comercial' && d.cliente) {
                     if (d.plan !== "1" && d.cuotaActual >= parseInt(d.plan) && parseInt(d.plan) > 0) est = "transferido";
@@ -580,7 +579,7 @@
                     } else est = "al_dia";
                 } else est = d.tipo;
                 
-                d.estado = est; // Sincroniza estado real
+                d.estado = est; 
                 document.getElementById(key).style.fill = coloresRelleno[est] || "#fff";
 
                 totales.filter.todos++;
@@ -639,6 +638,29 @@
             d.estado = calcularCamposAutomaticos();
             set(ref(db, 'lotes/' + loteSeleccionadoActual), d);
             setFormEditable(false);
+        };
+
+        // --- NUEVA FUNCIÓN PARA LIMPIAR TOTALMENTE EL LOTE ---
+        window.liberarLote = function() {
+            if (!confirm("⚠️ ¿Estás seguro de que deseas LIBERAR este lote? Se borrarán todos los datos del cliente, historial de pagos, y el lote volverá a figurar como 'Disponible' en el sistema.")) return;
+            
+            document.getElementById('form-tipo-lote').value = "comercial";
+            document.getElementById('form-cliente').value = ""; 
+            document.getElementById('form-plan-cuotas').value = "130";
+            document.getElementById('form-monto-cuota').value = ""; 
+            document.getElementById('form-cuota-actual').value = "";
+            document.getElementById('form-mes-cubierto').value = ""; 
+            document.getElementById('form-fecha-pago').value = "";
+            
+            alternarCamposPorTipo();
+            
+            // Simula el clic de guardar para enviar la liberación a Firebase
+            document.getElementById('btn-guardar').click();
+        };
+
+        window.ponerEnRecuperacion = function() {
+            document.getElementById('form-tipo-lote').value = "recuperado";
+            alternarCamposPorTipo();
         };
 
         window.toggleMapeo = () => {

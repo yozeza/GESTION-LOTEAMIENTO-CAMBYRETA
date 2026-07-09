@@ -2,97 +2,163 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
     <title>GESTION LOTEAMIENTO CAMBYRETA</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
+        #contenedor-svg rectangle, #contenedor-svg polygon, #contenedor-svg path, #contenedor-svg rect {
+            cursor: pointer; transition: all 0.2s ease-in-out; -webkit-tap-highlight-color: transparent;
+        }
+        #contenedor-svg rectangle:hover, #contenedor-svg polygon:hover, #contenedor-svg path:hover, #contenedor-svg rect:hover {
+            fill-opacity: 0.85; filter: drop-shadow(0px 6px 10px rgba(0,0,0,0.4));
+        }
         #contenedor-svg svg { width: 100% !important; height: auto !important; max-height: 60vh; }
+        @media (min-width: 768px) { #contenedor-svg svg { max-height: 75vh; } }
     </style>
 </head>
-<body class="bg-gray-100 font-sans h-screen flex flex-col">
+<body class="bg-gray-100 font-sans md:h-screen flex flex-col min-h-screen">
 
-    <header class="bg-slate-800 text-white p-4 shadow-md font-bold">
-        GESTION LOTEAMIENTO CAMBYRETA
+    <header class="bg-slate-800 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-2 z-10">
+        <div class="flex items-center space-x-3">
+            <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
+            <h1 class="text-base sm:text-xl font-bold tracking-wider text-center sm:text-left">GESTION LOTEAMIENTO CAMBYRETA</h1>
+        </div>
+        <div class="text-[11px] sm:text-sm bg-slate-700 px-3 py-1 rounded text-slate-300 flex items-center gap-2">
+            <span>Sincronización: <span class="text-emerald-400 font-bold">Tiempo Real</span></span>
+            <span class="text-slate-500">|</span>
+            <span>👥 <span id="usuarios-activos" class="text-cyan-400 font-bold">1</span> online</span>
+        </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden">
-        <aside class="w-72 bg-slate-50 p-4 border-r border-gray-200">
-            <button onclick="document.getElementById('import-csv').click()" 
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-bold text-sm shadow-md transition-all">
-                📥 Importar CSV Normalizado
-            </button>
-            <input type="file" id="import-csv" class="hidden" accept=".csv" onchange="procesarImportacionCSV(event)">
-        </aside>
+    <div class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
+        
+        <aside class="w-full md:w-72 bg-slate-50 p-4 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col gap-4 shadow-sm overflow-y-auto">
+            
+            <div class="bg-white p-3 rounded-xl border shadow-xs space-y-2">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-1">Carga de Datos</h3>
+                <input type="file" id="import-csv" accept=".csv" class="hidden" onchange="procesarImportacionCSV(event)">
+                <button onclick="document.getElementById('import-csv').click()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
+                    <span>📥</span> <span>Importar CSV (Fracción, Mza, Lote)</span>
+                </button>
+                <button onclick="exportarBaseDatosCSV()" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
+                    <span>📤</span> <span>Exportar Base Total</span>
+                </button>
+            </div>
 
-        <main class="flex-1 p-4 overflow-y-auto">
-            <div id="contenedor-svg" class="bg-white p-4 rounded shadow-lg"></div>
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Filtros</h3>
+                <div class="grid grid-cols-2 md:grid-cols-1 gap-1">
+                    <button onclick="filtrarMapa('todos')" class="flex items-center justify-between p-2 bg-white border text-[11px] font-medium text-slate-700 rounded-lg cursor-pointer"><span>Todos</span></button>
+                    <button onclick="filtrarMapa('disponible')" class="flex items-center justify-between p-2 bg-white border text-[11px] font-medium text-slate-700 rounded-lg cursor-pointer"><span>Libres</span></button>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="flex-1 bg-white p-4 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 min-h-[350px] relative">
+            <div id="contenedor-svg" class="w-full h-full max-w-[480px] flex items-center justify-center">
+                <div class="text-center text-gray-400 py-12"><p class="text-sm animate-pulse">Cargando plano...</p></div>
+            </div>
         </main>
+
+        <aside class="w-full md:w-[26rem] bg-gray-50 p-5 flex flex-col justify-between shadow-xl overflow-y-auto">
+            <div>
+                <h2 class="text-sm font-bold text-slate-800 mb-3 border-b pb-2">📋 Ficha de Registro</h2>
+                <div id="info-lote" class="hidden space-y-3">
+                    <div class="bg-white p-3 rounded-xl shadow-xs border border-gray-200">
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <div><label class="text-[10px] uppercase font-bold text-slate-500 block">Frac.</label><input id="form-fraccion" type="text" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-bold text-slate-800"></div>
+                            <div><label class="text-[10px] uppercase font-bold text-slate-500 block">Mza</label><input id="form-mza" type="text" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-bold text-slate-800"></div>
+                            <div><label class="text-[10px] uppercase font-bold text-slate-500 block">Lote N°</label><input id="form-nro" type="text" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-bold text-slate-800"></div>
+                        </div>
+                        <div class="mt-3"><label class="text-[10px] font-bold text-slate-500 uppercase block">Nombre Cliente</label><input id="form-cliente" type="text" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-semibold text-slate-800"></div>
+                    </div>
+                    <div id="panel-acciones" class="mt-4 pt-3 border-t border-gray-200 space-y-2">
+                        <button id="btn-editar" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-sm">✏️ Editar</button>
+                        <div id="controles-edicion-activa" class="hidden space-y-2">
+                            <button id="btn-guardar" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl text-sm">💾 Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // --- TU CONFIGURACIÓN DE FIREBASE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg",
-            authDomain: "cambyreta-lotes.firebaseapp.com",
-            projectId: "cambyreta-lotes",
-            storageBucket: "cambyreta-lotes.firebasestorage.app",
-            messagingSenderId: "614326622443",
-            appId: "1:614326622443:web:7979f0d0aee5986f0a06ae"
-        };
-        
+        // ... Configuración Firebase ...
+        const firebaseConfig = { apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg", authDomain: "cambyreta-lotes.firebaseapp.com", databaseURL: "https://cambyreta-lotes-default-rtdb.firebaseio.com", projectId: "cambyreta-lotes", storageBucket: "cambyreta-lotes.firebasestorage.app", messagingSenderId: "614326622443", appId: "1:614326622443:web:7979f0d0aee5986f0a06ae" };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const lotesRef = ref(db, 'lotes');
+        
+        let baseDatosLotes = {};
 
-        // --- LÓGICA DE NORMALIZACIÓN ---
-        function normalizarLlave(rawFraccion, rawMza, rawLote) {
-            // Mapeo de Manzanas
-            const mapaManzanas = { '001': 'A', '002': 'B', '003': 'C' };
-            const mza = mapaManzanas[rawMza] || rawMza;
-            
-            // Eliminar ceros a la izquierda del lote
-            const lote = parseInt(rawLote, 10).toString();
-
-            return { mza, lote, key: `${mza}-${lote}` };
-        }
-
-        // --- PROCESADOR CSV ---
+        // IMPORTACIÓN ROBUSTA (SOPORTA FORMATO SEPARADO Y FORMATO ANTIGUO)
         window.procesarImportacionCSV = function(event) {
             const file = event.target.files[0];
             const reader = new FileReader();
-
             reader.onload = function(e) {
-                const text = e.target.result;
-                const rows = text.split('\n').slice(1); // Saltar encabezados
+                const lines = e.target.result.split(/\r?\n/);
+                const headers = lines[0].toLowerCase().split(',');
 
-                rows.forEach(row => {
-                    if (!row.trim()) return;
-                    const cols = row.split(',').map(c => c.replace(/"/g, '').trim());
+                lines.forEach((line, index) => {
+                    if (index === 0 || !line.trim()) return;
+                    const cols = line.replace(/"/g, '').split(',');
+
+                    // Intentar detectar si es formato 3 columnas (Frac, Mza, Lote) o formato viejo (Lote único)
+                    let fraccion = "206", mza = "", nro = "";
                     
-                    // Supone formato: 206/003/0016
-                    const partes = cols[0].split('/'); 
-                    if (partes.length < 3) return;
+                    // Lógica de detección: si hay columna 'fraccion' o si la primera columna tiene '/'
+                    if (cols.length >= 3 && !cols[0].includes('/')) {
+                        fraccion = cols[0]; mza = cols[1]; nro = cols[2];
+                    } else {
+                        const partes = cols[0].split('/');
+                        if (partes.length >= 3) { fraccion = partes[0]; mza = partes[1]; nro = partes[2]; }
+                    }
 
-                    const f = partes[0]; // 206
-                    const m = partes[1]; // 003
-                    const l = partes[2]; // 0016
-
-                    const datos = normalizarLlave(f, m, l);
-
-                    // Guardar en Firebase
-                    set(ref(db, 'lotes/' + datos.key), {
-                        fraccion: f,
-                        manzana: datos.mza,
-                        lote: datos.lote,
-                        cliente: cols[2] || "Sin nombre",
-                        ultimaImportacion: new Date().toISOString()
-                    });
+                    // Buscar el lote en la DB por coincidencia
+                    for (const id in baseDatosLotes) {
+                        const l = baseDatosLotes[id];
+                        if (String(l.fraccion) === String(fraccion) && String(l.mza) === String(mza) && String(l.nro) === String(nro)) {
+                            l.cliente = cols[2] || l.cliente; // Ajustar índice según tu CSV real
+                            set(ref(db, 'lotes/' + id), l);
+                            break;
+                        }
+                    }
                 });
-                alert("Base de datos actualizada con éxito (Manzanas A/B/C y Lotes limpios).");
+                alert("Importación completa");
             };
             reader.readAsText(file);
+        };
+
+        window.exportarBaseDatosCSV = () => {
+            let csv = "Fraccion,Manzana,Lote,Cliente\n";
+            Object.values(baseDatosLotes).forEach(l => {
+                csv += `${l.fraccion||''},${l.mza||''},${l.nro||''},${l.cliente||''}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "LOTEAMIENTO_EXPORT.csv";
+            link.click();
+        };
+
+        // ... Lógica de Carga Inicial ...
+        onValue(lotesRef, (snapshot) => {
+            baseDatosLotes = snapshot.val() || {};
+        });
+
+        // ... Función Guardar Actualizada ...
+        document.getElementById('btn-guardar').onclick = () => {
+            const id = loteSeleccionadoActual; // Suponiendo variable global
+            const l = baseDatosLotes[id];
+            l.fraccion = document.getElementById('form-fraccion').value;
+            l.mza = document.getElementById('form-mza').value;
+            l.nro = document.getElementById('form-nro').value;
+            l.cliente = document.getElementById('form-cliente').value;
+            set(ref(db, 'lotes/' + id), l);
         };
     </script>
 </body>

@@ -210,7 +210,7 @@
                 <button id="btn-editar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow">✏️ Modificar Ficha</button>
                 
                 <div id="controles-edicion-activa" class="hidden space-y-2">
-                    <button id="btn-guardar" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow">💾 Guardar Cambios</button>
+                    <button id="btn-guardar" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow mb-2">💾 Guardar Cambios</button>
                     
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" onclick="liberarLote()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 px-1 rounded-lg transition-colors text-xs text-center cursor-pointer flex items-center justify-center space-x-1 shadow-xs">
@@ -221,7 +221,7 @@
                         </button>
                     </div>
 
-                    <button id="btn-cancelar" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-xl text-xs transition-colors">❌ Cancelar Edición</button>
+                    <button id="btn-cancelar" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-xl text-xs transition-colors mt-2">❌ Cancelar Edición</button>
                 </div>
             </div>
         </aside>
@@ -407,7 +407,7 @@
             return estado;
         }
 
-        // --- IMPORTACIÓN NATIVA ROBUSTA (Resuelve comillas y comas en nombres) ---
+        // --- IMPORTACIÓN ESTRICTA ADAPTADA A "PLANILLA 01.CSV" ---
         window.procesarImportacionCSV = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -416,65 +416,60 @@
             reader.onload = function(e) {
                 const contenido = e.target.result;
                 const lineas = contenido.split(/\r?\n/);
-                if (lineas.length < 2) return;
+                if (lineas.length < 2) {
+                    alert("⚠️ El archivo está vacío o no es válido.");
+                    return;
+                }
 
-                // Detectar separador (',' estándar, o ';' por Excel regional)
+                // Detectar si Excel lo guardó con punto y coma
                 let separador = ',';
-                if (lineas[0].includes(';')) separador = ';';
+                if (lineas[0].split(';').length > lineas[0].split(',').length) {
+                    separador = ';';
+                }
 
-                // Función interna para parsear una fila CSV respetando los textos entre comillas
+                // Función nativa para limpiar las comillas dobles "" que rompen la lectura
                 function parsearFila(texto) {
                     let resultado = [];
                     let valor = '';
                     let enComillas = false;
                     for (let i = 0; i < texto.length; i++) {
                         const char = texto[i];
-                        if (char === '"') enComillas = !enComillas;
-                        else if (char === separador && !enComillas) {
-                            resultado.push(valor.trim().replace(/^["']|["']$/g, ''));
+                        if (char === '"') {
+                            enComillas = !enComillas; 
+                        } else if (char === separador && !enComillas) {
+                            resultado.push(valor.trim());
                             valor = '';
-                        } else valor += char;
+                        } else {
+                            valor += char;
+                        }
                     }
-                    resultado.push(valor.trim().replace(/^["']|["']$/g, ''));
+                    resultado.push(valor.trim());
                     return resultado;
                 }
 
-                const cabecera = parsearFila(lineas[0]).map(s => s.toLowerCase());
-                
-                // Mapeo seguro de las columnas de la inmobiliaria
-                let idxLote = cabecera.findIndex(c => c === 'lote');
-                let idxFecha = cabecera.findIndex(c => c.includes('fecha'));
-                let idxCliente = cabecera.findIndex(c => c === 'cliente');
-                let idxCuota = cabecera.findIndex(c => c.includes('cuota'));
-                let idxMes = cabecera.findIndex(c => c === 'mes');
-                let idxMonto = cabecera.findIndex(c => c.includes('pagado'));
-
-                // Fallbacks si la cabecera no tiene exactamente esos nombres
-                if (idxLote === -1) idxLote = 0;
-                if (idxFecha === -1) idxFecha = 1;
-                if (idxCliente === -1) idxCliente = 2;
-                if (idxCuota === -1) idxCuota = 3;
-                if (idxMes === -1) idxMes = 4;
-                if (idxMonto === -1) idxMonto = 6;
-
                 let actualizados = 0;
                 let liquidacionTotalBruta = 0;
+                let lotesNoEncontrados = [];
 
+                // Normalizador para emparejar Mza y Nro correctamente (ej. "003" -> "3")
                 function normalizar(val) {
                     if (!val) return "";
-                    const s = String(val).trim().toUpperCase();
-                    return /^\d+$/.test(s) ? parseInt(s, 10).toString() : s;
+                    return String(val).trim().toUpperCase().replace(/^0+/, '') || "0";
                 }
 
                 const mapMesesMin = { 'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06', 'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12' };
 
+                // Omitir cabecera (i=1) y procesar datos fijos de la "PLANILLA 01.CSV"
                 for (let i = 1; i < lineas.length; i++) {
                     if (!lineas[i].trim()) continue;
 
                     const row = parsearFila(lineas[i]);
-                    if (row.length <= Math.max(idxLote, idxMonto)) continue;
+                    
+                    // Orden fijo:
+                    // 0: Lote | 1: Fecha de pago | 2: Cliente | 3: Nro cuota | 4: Mes | 5: Factura | 6: Monto Pagado
+                    if (row.length < 7) continue; 
 
-                    const celdaLote = row[idxLote] || "";
+                    const celdaLote = row[0] || "";
                     if (!celdaLote.includes('/')) continue; 
 
                     const partesId = celdaLote.split('/');
@@ -483,29 +478,25 @@
                     const csvMza = normalizar(partesId[1]);
                     const csvNro = normalizar(partesId[2]);
 
-                    const celdaFecha = row[idxFecha] || "";
+                    const celdaFecha = row[1] || "";
                     let csvFechaPago = "";
                     if (celdaFecha.includes('/')) {
                         const fp = celdaFecha.split('/');
                         if (fp.length === 3) csvFechaPago = `${fp[2]}-${fp[1].padStart(2, '0')}-${fp[0].padStart(2, '0')}`;
-                    } else if (celdaFecha.includes('-')) {
-                        csvFechaPago = celdaFecha;
                     }
 
-                    const csvCliente = row[idxCliente] || "";
+                    const csvCliente = row[2] || "";
 
-                    const celdaCuota = row[idxCuota] || "";
+                    const celdaCuota = row[3] || "";
                     let csvCuotaActual = 0;
                     let csvPlan = "130";
                     if (celdaCuota.includes('/')) {
                         const cp = celdaCuota.split('/');
                         csvCuotaActual = parseInt(cp[0]) || 0;
                         csvPlan = cp[1] ? cp[1].trim() : "130";
-                    } else {
-                        csvCuotaActual = parseInt(celdaCuota) || 0;
                     }
 
-                    const celdaMes = row[idxMes] || "";
+                    const celdaMes = row[4] || "";
                     let csvMesCubierto = "";
                     if (celdaMes.includes('/')) {
                         const mp = celdaMes.split('/');
@@ -513,14 +504,14 @@
                             const mesTexto = mp[0].trim().toLowerCase();
                             if (mapMesesMin[mesTexto]) csvMesCubierto = `${mp[1].trim()}-${mapMesesMin[mesTexto]}`;
                         }
-                    } else if (celdaMes.includes('-')) {
-                        csvMesCubierto = celdaMes;
                     }
 
-                    const celdaMonto = row[idxMonto] || "";
+                    const celdaMonto = row[6] || ""; 
+                    // Se quitan los puntos de los miles y cualquier formato residual
                     let montoLimpio = celdaMonto.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.]/g, '');
                     const csvMonto = parseFloat(montoLimpio) || 0;
 
+                    let encontrado = false;
                     for (const key in baseDatosLotes) {
                         const lote = baseDatosLotes[key];
                         const lMza = normalizar(lote.mza);
@@ -538,27 +529,28 @@
                             set(ref(db, 'lotes/' + key), lote);
                             actualizados++;
                             liquidacionTotalBruta += csvMonto;
+                            encontrado = true;
                             break;
                         }
                     }
+
+                    if(!encontrado) {
+                        lotesNoEncontrados.push(`Mza ${csvMza}, Lote ${csvNro}`);
+                    }
                 }
 
-                const iva5 = liquidacionTotalBruta * (1.5 / 101.5);
-                const ire24 = (liquidacionTotalBruta - iva5) * 0.024;
+                if (actualizados === 0) {
+                    alert(`⚠️ Error: El formato fue leído correctamente, pero NO se encontró ningún lote coincidente en tu mapa.\n\nEjemplo de lote buscado: ${lotesNoEncontrados[0] || 'Ninguno'}\n\nAsegurate de haber asignado la manzana y número correctos usando la herramienta "Asignación Rápida".`);
+                } else {
+                    const iva5 = liquidacionTotalBruta * (1.5 / 101.5);
+                    const ire24 = (liquidacionTotalBruta - iva5) * 0.024;
+                    alert(`✅ Carga Exitosa: ${actualizados} lotes enlazados con la planilla.\n\n📊 RESUMEN (Proyección):\nRecaudación Bruta: ${liquidacionTotalBruta.toLocaleString('es-PY')} Gs.\nIVA 5%: -${iva5.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.\nRetención IRE (2.4%): -${ire24.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.`);
+                }
                 
-                alert(`✅ Planilla procesada con éxito.\nLotes actualizados en mapa: ${actualizados}\n\n📊 RESUMEN IMPOSITIVO ESTIMADO:\nRecaudación Bruta: ${liquidacionTotalBruta.toLocaleString('es-PY')} Gs.\nIVA 5%: -${iva5.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.\nRetención IRE (2.4%): -${ire24.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.`);
                 document.getElementById('import-csv').value = ""; 
             };
             reader.readAsText(file);
         };
-
-        function alternarCamposPorTipo() {
-            const tipo = document.getElementById('form-tipo-lote').value;
-            const reqComercial = tipo === 'comercial';
-            document.getElementById('seccion-cliente').style.display = (reqComercial||tipo==='transferido') ? 'block' : 'none';
-            document.getElementById('seccion-financiera').style.display = reqComercial ? 'block' : 'none';
-            calcularCamposAutomaticos();
-        }
 
         function calcularEstadosGlobales() {
             let totales = { total:0, libres:0, vendidos:0, criticos:0, filter:{ todos:0, disponible:0, al_dia:0, en_mora:0, en_riesgo:0, falta_gestion:0, transferido:0, ocupacion:0 } };
@@ -640,7 +632,7 @@
             setFormEditable(false);
         };
 
-        // --- NUEVA FUNCIÓN PARA LIMPIAR TOTALMENTE EL LOTE ---
+        // --- FUNCIÓN PARA LIMPIAR Y LIBERAR EL LOTE COMPLETAMENTE ---
         window.liberarLote = function() {
             if (!confirm("⚠️ ¿Estás seguro de que deseas LIBERAR este lote? Se borrarán todos los datos del cliente, historial de pagos, y el lote volverá a figurar como 'Disponible' en el sistema.")) return;
             
@@ -654,7 +646,7 @@
             
             alternarCamposPorTipo();
             
-            // Simula el clic de guardar para enviar la liberación a Firebase
+            // Hacer clic automático en guardar para asegurar los datos limpios en la nube
             document.getElementById('btn-guardar').click();
         };
 

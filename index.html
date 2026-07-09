@@ -3,99 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GESTION LOTEAMIENTO</title>
+    <title>GESTION LOTEAMIENTO CAMBYRETA</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        #contenedor-svg svg { width: 100%; height: auto; }
-        .hidden { display: none; }
+        #contenedor-svg svg { width: 100% !important; height: auto !important; max-height: 60vh; }
     </style>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col">
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
 
-    <header class="bg-slate-800 text-white p-4 font-bold">GESTION LOTEAMIENTO CAMBYRETA</header>
+    <header class="bg-slate-800 text-white p-4 shadow-md font-bold">
+        GESTION LOTEAMIENTO CAMBYRETA
+    </header>
 
     <div class="flex-1 flex overflow-hidden">
-        
-        <aside class="w-72 bg-white p-4 border-r overflow-y-auto">
-            <h2 class="text-xs font-bold text-gray-500 uppercase mb-2">Administración</h2>
-            <input type="file" id="import-csv" class="hidden" accept=".csv" onchange="procesarCSV(event)">
-            <button onclick="document.getElementById('import-csv').click()" class="w-full bg-blue-600 text-white p-2 rounded text-sm font-bold">📥 Cargar CSV</button>
+        <aside class="w-72 bg-slate-50 p-4 border-r border-gray-200">
+            <button onclick="document.getElementById('import-csv').click()" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-bold text-sm shadow-md transition-all">
+                📥 Importar CSV Normalizado
+            </button>
+            <input type="file" id="import-csv" class="hidden" accept=".csv" onchange="procesarImportacionCSV(event)">
         </aside>
 
         <main class="flex-1 p-4 overflow-y-auto">
-            <div id="contenedor-svg" class="bg-white p-4 rounded shadow">
-                </div>
+            <div id="contenedor-svg" class="bg-white p-4 rounded shadow-lg"></div>
         </main>
-
-        <aside class="w-96 bg-white p-4 border-l">
-            <h2 class="font-bold mb-4 border-b pb-2">Ficha del Lote</h2>
-            <div class="space-y-4">
-                <div class="grid grid-cols-3 gap-2">
-                    <div><label class="text-[10px] uppercase font-bold text-gray-400">Frac</label><input id="val-fraccion" type="text" class="w-full border p-1 rounded text-sm"></div>
-                    <div><label class="text-[10px] uppercase font-bold text-gray-400">Mza</label><input id="val-mza" type="text" class="w-full border p-1 rounded text-sm"></div>
-                    <div><label class="text-[10px] uppercase font-bold text-gray-400">Lote</label><input id="val-nro" type="text" class="w-full border p-1 rounded text-sm"></div>
-                </div>
-                <div><label class="text-[10px] uppercase font-bold text-gray-400">Cliente</label><input id="val-cliente" type="text" class="w-full border p-1 rounded text-sm"></div>
-                <button onclick="guardarLote()" class="w-full bg-green-600 text-white py-2 rounded font-bold mt-4">💾 Guardar Cambios</button>
-            </div>
-        </aside>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // IMPORTANTE: REEMPLAZA ESTO CON TU CONFIGURACIÓN
-        const firebaseConfig = { 
-            apiKey: "TU_API_KEY", 
-            authDomain: "TU_PROYECTO.firebaseapp.com", 
-            databaseURL: "TU_DB_URL", 
-            projectId: "TU_PROJECT_ID" 
+        // --- TU CONFIGURACIÓN DE FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFk6NFEE0Hf5IjUMUP5F7cyFg7T3EXhqg",
+            authDomain: "cambyreta-lotes.firebaseapp.com",
+            projectId: "cambyreta-lotes",
+            storageBucket: "cambyreta-lotes.firebasestorage.app",
+            messagingSenderId: "614326622443",
+            appId: "1:614326622443:web:7979f0d0aee5986f0a06ae"
         };
         
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Lógica de Procesamiento CSV
-        window.procesarCSV = (event) => {
+        // --- LÓGICA DE NORMALIZACIÓN ---
+        function normalizarLlave(rawFraccion, rawMza, rawLote) {
+            // Mapeo de Manzanas
+            const mapaManzanas = { '001': 'A', '002': 'B', '003': 'C' };
+            const mza = mapaManzanas[rawMza] || rawMza;
+            
+            // Eliminar ceros a la izquierda del lote
+            const lote = parseInt(rawLote, 10).toString();
+
+            return { mza, lote, key: `${mza}-${lote}` };
+        }
+
+        // --- PROCESADOR CSV ---
+        window.procesarImportacionCSV = function(event) {
             const file = event.target.files[0];
             const reader = new FileReader();
-            
-            reader.onload = (e) => {
+
+            reader.onload = function(e) {
                 const text = e.target.result;
-                const rows = text.split('\n');
-                
-                rows.forEach((row, index) => {
-                    if (index === 0 || !row.trim()) return; // Saltar header
+                const rows = text.split('\n').slice(1); // Saltar encabezados
+
+                rows.forEach(row => {
+                    if (!row.trim()) return;
                     const cols = row.split(',').map(c => c.replace(/"/g, '').trim());
                     
-                    // Supone formato: Fraccion, Mza, Lote, Cliente...
-                    const [fraccion, mza, nro, cliente] = cols;
-                    
-                    // Aquí actualizas tu base de datos
-                    const loteId = `${fraccion}_${mza}_${nro}`;
-                    set(ref(db, 'lotes/' + loteId), {
-                        fraccion: fraccion,
-                        mza: mza,
-                        nro: nro,
-                        cliente: cliente,
-                        ultimaActualizacion: new Date().toISOString()
+                    // Supone formato: 206/003/0016
+                    const partes = cols[0].split('/'); 
+                    if (partes.length < 3) return;
+
+                    const f = partes[0]; // 206
+                    const m = partes[1]; // 003
+                    const l = partes[2]; // 0016
+
+                    const datos = normalizarLlave(f, m, l);
+
+                    // Guardar en Firebase
+                    set(ref(db, 'lotes/' + datos.key), {
+                        fraccion: f,
+                        manzana: datos.mza,
+                        lote: datos.lote,
+                        cliente: cols[2] || "Sin nombre",
+                        ultimaImportacion: new Date().toISOString()
                     });
                 });
-                alert("Base de datos actualizada correctamente.");
+                alert("Base de datos actualizada con éxito (Manzanas A/B/C y Lotes limpios).");
             };
             reader.readAsText(file);
-        };
-
-        window.guardarLote = () => {
-            const fraccion = document.getElementById('val-fraccion').value;
-            const mza = document.getElementById('val-mza').value;
-            const nro = document.getElementById('val-nro').value;
-            const cliente = document.getElementById('val-cliente').value;
-            
-            set(ref(db, 'lotes/' + `${fraccion}_${mza}_${nro}`), {
-                fraccion, mza, nro, cliente
-            }).then(() => alert("Guardado"));
         };
     </script>
 </body>

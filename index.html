@@ -18,6 +18,61 @@
 </head>
 <body class="bg-gray-100 font-sans md:h-screen flex flex-col min-h-screen">
 
+    <!-- Modal de Rendición Manual -->
+    <div id="modal-rendicion" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
+                <h2 class="font-bold flex items-center gap-2 text-sm uppercase tracking-wider">📝 Cargar Rendición Manual</h2>
+                <button onclick="cerrarModalRendicion()" class="text-slate-300 hover:text-white cursor-pointer text-lg">✖</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Manzana</label>
+                        <select id="rend-mza" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">--</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Lote N°</label>
+                        <input id="rend-nro" type="number" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nombre del Comprador</label>
+                    <input id="rend-cliente" type="text" list="lista-clientes" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe para buscar o autocompletar...">
+                </div>
+                <div class="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
+                    <div>
+                        <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Monto Abonado Gs.</label>
+                        <input id="rend-monto" type="number" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-emerald-700 font-bold uppercase block mb-1">Paga la Cuota N°</label>
+                        <input id="rend-cuota" type="number" class="w-full bg-emerald-50 border border-emerald-300 font-bold text-emerald-900 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] text-blue-700 font-bold uppercase block mb-1">Mes que Cubre</label>
+                        <input id="rend-mes" type="month" class="w-full bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Fecha de Pago Física</label>
+                        <input id="rend-fecha" type="date" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <button onclick="guardarRendicionManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow mt-2 flex justify-center items-center gap-2 cursor-pointer">
+                    <span>💾</span> Registrar Rendición
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Fin Modal -->
+
     <header class="bg-slate-800 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-2 z-10">
         <div class="flex items-center space-x-3">
             <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
@@ -53,12 +108,19 @@
             </div>
 
             <div class="bg-white p-3 rounded-xl border shadow-xs space-y-2">
-                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-1">Carga de Datos (Liquidación)</h3>
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2">Carga de Datos (Liquidación)</h3>
+                
+                <button onclick="abrirModalRendicion()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
+                    <span>📝</span> <span>Cargar Rendición Manual</span>
+                </button>
+                
+                <hr class="border-gray-100 my-1">
                 
                 <input type="file" id="import-csv" accept=".csv" class="hidden" onchange="procesarImportacionCSV(event)">
                 <button onclick="document.getElementById('import-csv').click()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
-                    <span>📥</span> <span>Importar Planilla Inmobiliaria</span>
+                    <span>📥</span> <span>Importar Planilla (CSV)</span>
                 </button>
+                
                 <button onclick="exportarBaseDatosCSV()" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
                     <span>📤</span> <span>Exportar Base Total</span>
                 </button>
@@ -130,6 +192,7 @@
                 </div>
             </div>
 
+            <!-- Cartel Llamado Flotante (Tooltip) -->
             <div id="tooltip-lote" class="hidden absolute bg-slate-900/95 text-white text-[11px] p-3 rounded-xl shadow-2xl z-30 pointer-events-none border border-slate-700 flex flex-col gap-0.5 min-w-[160px] backdrop-blur-xs">
                 <div id="tip-lote-mza" class="font-black text-slate-200 border-b border-slate-700 pb-1 mb-1 text-xs tracking-wide"></div>
                 <div id="tip-cliente" class="font-medium truncate"></div>
@@ -376,7 +439,7 @@
             if(window.innerWidth < 768) document.getElementById('info-lote').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // --- LLAMADO FLOTANTE (TOOLTIP) AL HACER CLICK EN LOTE ---
+        // --- LLAMADO FLOTANTE (TOOLTIP) ---
         function mostrarLlamadoFlotante(e, id) {
             const d = baseDatosLotes[id];
             const tooltip = document.getElementById('tooltip-lote');
@@ -420,7 +483,6 @@
                 document.getElementById('tip-estado').className = "font-bold mt-1 text-xs text-gray-400";
             }
 
-            // Posicionar relativo al componente <main>
             const mainEl = document.querySelector('main');
             const rect = mainEl.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -431,7 +493,6 @@
             tooltip.classList.remove('hidden');
         }
 
-        // Ocultar llamado flotante si se hace clic fuera de los vectores
         document.addEventListener('click', (e) => {
             const tooltip = document.getElementById('tooltip-lote');
             if (tooltip && !e.target.closest('#contenedor-svg')) {
@@ -439,7 +500,7 @@
             }
         });
 
-        // --- ACTUALIZAR DATALIST DE CLIENTES PARA AUTOCOMPLETADO ---
+        // --- ACTUALIZAR DATALIST DE CLIENTES ---
         function actualizarDatalistClientes() {
             const dl = document.getElementById('lista-clientes');
             if (!dl) return;
@@ -517,6 +578,64 @@
 
             return estado;
         }
+
+        // --- LÓGICA MODAL RENDICIÓN MANUAL ---
+        window.abrirModalRendicion = function() {
+            document.getElementById('rend-mza').value = "";
+            document.getElementById('rend-nro').value = "";
+            document.getElementById('rend-cliente').value = "";
+            document.getElementById('rend-monto').value = "";
+            document.getElementById('rend-cuota').value = "";
+            document.getElementById('rend-mes').value = "";
+            document.getElementById('rend-fecha').value = new Date().toISOString().split('T')[0];
+            
+            document.getElementById('modal-rendicion').classList.remove('hidden');
+        };
+
+        window.cerrarModalRendicion = function() {
+            document.getElementById('modal-rendicion').classList.add('hidden');
+        };
+
+        window.guardarRendicionManual = function() {
+            const mza = document.getElementById('rend-mza').value.toUpperCase().trim();
+            const nro = String(document.getElementById('rend-nro').value).trim().padStart(2, '0');
+            const cliente = document.getElementById('rend-cliente').value.trim();
+            const monto = parseFloat(document.getElementById('rend-monto').value) || 0;
+            const cuota = parseInt(document.getElementById('rend-cuota').value) || 0;
+            const mesCub = document.getElementById('rend-mes').value;
+            const fecha = document.getElementById('rend-fecha').value;
+
+            if (!mza || !nro) { alert("⚠️ Faltan datos: Manzana y Lote son obligatorios."); return; }
+            if (monto <= 0) { alert("⚠️ El monto de la cuota no puede estar vacío o ser 0."); return; }
+
+            let loteIdEncontrado = null;
+            let datosLote = null;
+
+            for (const key in baseDatosLotes) {
+                const l = baseDatosLotes[key];
+                if (l.mza === mza && String(l.nro).padStart(2, '0') === nro) {
+                    loteIdEncontrado = key;
+                    datosLote = l;
+                    break;
+                }
+            }
+
+            if (loteIdEncontrado) {
+                datosLote.montoCuota = monto;
+                datosLote.cuotaActual = cuota;
+                datosLote.mesCubierto = mesCub;
+                datosLote.fechaPago = fecha;
+                if(cliente) datosLote.cliente = cliente;
+                datosLote.tipo = "comercial";
+
+                set(ref(db, 'lotes/' + loteIdEncontrado), datosLote).then(() => {
+                    alert(`✅ Pago Registrado para Manzana ${mza}, Lote ${nro}`);
+                    cerrarModalRendicion();
+                });
+            } else {
+                alert(`❌ No se encontró ningún lote con Manzana ${mza} y Nro ${nro} en el plano.`);
+            }
+        };
 
         // --- IMPORTACIÓN ESTRICTA ADAPTADA A "PLANILLA 01.CSV" ---
         window.procesarImportacionCSV = function(event) {
@@ -686,7 +805,6 @@
                 }
             }
 
-            // Validar que los elementos existan antes de insertar texto
             const elTotal = document.getElementById('resumen-total'); if(elTotal) elTotal.innerText = totales.total;
             const elLibres = document.getElementById('resumen-libres'); if(elLibres) elLibres.innerText = totales.libres;
             const elVendidos = document.getElementById('resumen-vendidos'); if(elVendidos) elVendidos.innerText = totales.vendidos;
@@ -787,7 +905,6 @@
         window.calcularCamposAutomaticos = calcularCamposAutomaticos;
     </script>
     <script>
-        // Función global fallback para manipulación visual responsiva rápida
         function alternarCamposPorTipo() {
             const tipo = document.getElementById('form-tipo-lote').value;
             const sFinan = document.getElementById('seccion-financiera');
@@ -799,7 +916,7 @@
                 if(sFinan) sFinan.classList.add('hidden');
                 if(tipo === 'plaza' ? sCli && sCli.classList.add('hidden') : sCli && sCli.classList.remove('hidden'));
             }
-            if(typeof window.calcularCamposAutomaticos === 'font') window.calcularCamposAutomaticos();
+            if(typeof window.calcularCamposAutomaticos === 'function') window.calcularCamposAutomaticos();
         }
     </script>
 </body>

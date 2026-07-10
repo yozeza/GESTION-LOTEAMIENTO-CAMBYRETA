@@ -129,8 +129,12 @@
                         <span class="text-[11px] text-gray-600 font-medium">Total Lotes</span>
                         <span id="resumen-total" class="text-sm font-black text-slate-800">0</span>
                     </div>
+                    <div class="bg-blue-50 p-2 rounded-xl border border-blue-100 flex justify-between shadow-xs">
+                        <span class="text-[11px] text-blue-800 font-semibold">Libres / Disponibles</span>
+                        <span id="resumen-libres" class="text-sm font-black text-blue-700">0</span>
+                    </div>
                     <div class="bg-emerald-50 p-2 rounded-xl border border-emerald-100 flex justify-between shadow-xs">
-                        <span class="text-[11px] text-emerald-800 font-semibold">Ocupados</span>
+                        <span class="text-[11px] text-emerald-800 font-semibold">Ocupados / Vendidos</span>
                         <span id="resumen-vendidos" class="text-sm font-black text-emerald-700">0</span>
                     </div>
                     <div class="bg-rose-50 p-2 rounded-xl border border-rose-100 flex justify-between shadow-xs">
@@ -485,7 +489,7 @@
 
             document.getElementById('tip-lote-mza').innerText = `Manzana ${d.mza} - Lote ${d.nro}`;
             
-            if (d.cliente) {
+            if (d.cliente && d.cliente.trim() !== "") {
                 document.getElementById('tip-cliente').innerText = `👤 Comprador: ${d.cliente}`;
                 document.getElementById('tip-cuotas').innerText = `📊 Cuota: ${d.cuotaActual || 0} / ${d.plan || '130'}`;
                 
@@ -564,29 +568,33 @@
 
             let estado = "disponible";
 
-            if (tipo !== 'comercial') {
-                estado = tipo; 
-            } else if (!cliente) {
-                estado = "disponible";
-            } else if (plan !== "1" && cuota >= parseInt(plan) && parseInt(plan) > 0) {
-                estado = "transferido";
-            } else if (mesCubierto) {
-                const hoy = new Date();
-                const [yCub, mCub] = mesCubierto.split('-').map(Number);
-                const mesesAtraso = (hoy.getFullYear() - yCub) * 12 + ((hoy.getMonth() + 1) - mCub);
+            if (tipo === 'comercial') {
+                if (cliente && cliente !== "") {
+                    if (plan !== "1" && cuota >= parseInt(plan) && parseInt(plan) > 0) {
+                        estado = "transferido";
+                    } else if (mesCubierto) {
+                        const hoy = new Date();
+                        const [yCub, mCub] = mesCubierto.split('-').map(Number);
+                        const mesesAtraso = (hoy.getFullYear() - yCub) * 12 + ((hoy.getMonth() + 1) - mCub);
 
-                let mesesSinMovimiento = 0;
-                if (fechaPago) {
-                    const fPago = new Date(fechaPago);
-                    mesesSinMovimiento = Math.floor((hoy - fPago) / (1000 * 60 * 60 * 24 * 30));
+                        let mesesSinMovimiento = 0;
+                        if (fechaPago) {
+                            const fPago = new Date(fechaPago);
+                            mesesSinMovimiento = Math.floor((hoy - fPago) / (1000 * 60 * 60 * 24 * 30));
+                        }
+
+                        if (mesesSinMovimiento >= 2) estado = "falta_gestion";
+                        else if (mesesAtraso >= 3) estado = "en_riesgo";
+                        else if (mesesAtraso > 0) estado = "en_mora";
+                        else estado = "al_dia";
+                    } else {
+                        estado = "al_dia"; 
+                    }
+                } else {
+                    estado = "disponible"; // CORRECCIÓN CLAVE: Si es comercial pero no hay cliente, queda disponible.
                 }
-
-                if (mesesSinMovimiento >= 2) estado = "falta_gestion";
-                else if (mesesAtraso >= 3) estado = "en_riesgo";
-                else if (mesesAtraso > 0) estado = "en_mora";
-                else estado = "al_dia";
             } else {
-                estado = "al_dia"; 
+                estado = tipo; // reservado, transferido, plaza, ocupacion
             }
 
             const badge = document.getElementById('badge-estado-calculado');
@@ -598,7 +606,7 @@
 
             if (tipo === 'comercial' && cliente && monto > 0 && cuota > 0) {
                 let percProp = 0.80; 
-                if (plan === "130" && cuota <= 19 && cuota % 2 !== 0) percPre = 0;
+                if (plan === "130" && cuota <= 19 && cuota % 2 !== 0) percProp = 0;
                 else if (plan === "65" && cuota <= 9 && cuota % 2 !== 0) percProp = 0;
                 else if (plan === "40" && cuota <= 7 && cuota % 2 !== 0) percProp = 0;
                 
@@ -622,7 +630,7 @@
             for (const key in baseDatosLotes) {
                 const l = baseDatosLotes[key];
                 if (l.mza === mza && String(l.nro).padStart(2, '0') === nro) {
-                    if(l.cliente) {
+                    if(l.cliente && l.cliente.trim() !== "") {
                         document.getElementById('rend-cliente').value = l.cliente;
                         if(l.montoCuota) document.getElementById('rend-monto').value = l.montoCuota;
                         if(l.cuotaActual) document.getElementById('rend-cuota').value = parseInt(l.cuotaActual) + 1;
@@ -638,7 +646,7 @@
 
             for (const key in baseDatosLotes) {
                 const l = baseDatosLotes[key];
-                if (l.cliente && l.cliente.toLowerCase() === clienteTipeado || l.cliente && l.cliente.toLowerCase().includes(clienteTipeado)) {
+                if (l.cliente && (l.cliente.toLowerCase() === clienteTipeado || l.cliente.toLowerCase().includes(clienteTipeado))) {
                     document.getElementById('rend-mza').value = l.mza || "";
                     document.getElementById('rend-nro').value = l.nro ? parseInt(l.nro) : "";
                     if(l.montoCuota) document.getElementById('rend-monto').value = l.montoCuota;
@@ -664,7 +672,7 @@
                     <td class="p-2 font-semibold text-emerald-600">${parseFloat(r.monto).toLocaleString('es-PY')} Gs.</td>
                     <td class="p-2 text-center font-bold text-indigo-600">C. ${r.cuota}</td>
                 `;
-                tbody.prepend(tr); // Muestra los últimos arriba
+                tbody.prepend(tr); 
             });
         }
 
@@ -678,7 +686,7 @@
             document.getElementById('rend-mes').value = "";
             document.getElementById('rend-fecha').value = new Date().toISOString().split('T')[0];
             
-            rendicionesSesion = []; // Resetea el historial visual de la sesión actual
+            rendicionesSesion = []; 
             const tbody = document.getElementById('tbody-resumen-modal');
             if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-[11px] text-gray-400 italic">Ningún registro procesado en esta tanda.</td></tr>`;
             
@@ -699,7 +707,6 @@
             const mesCub = document.getElementById('rend-mes').value;
             const fecha = document.getElementById('rend-fecha').value;
 
-            // Si presionó Guardar y no hay datos escritos, simplemente interpreta un cierre limpio.
             if(!autoContinuar && !mza && !rawNro && !cliente) {
                 cerrarModalRendicion();
                 return;
@@ -731,11 +738,9 @@
                 datosLote.tipo = "comercial";
 
                 set(ref(db, 'lotes/' + loteIdEncontrado), datosLote).then(() => {
-                    // Agrega la carga al resumen dinámico
                     agregarAResumenSesion(mza, nro, cliente, monto, cuota);
 
                     if(autoContinuar) {
-                        // Limpia el formulario para la siguiente fila pero preserva la fecha física por comodidad
                         document.getElementById('rend-mza').value = "";
                         document.getElementById('rend-nro').value = "";
                         document.getElementById('rend-cliente').value = "";
@@ -890,6 +895,7 @@
             reader.readAsText(file);
         };
 
+        // --- CÁLCULO GENERAL DE ESTADOS PARA MAPA Y RESUMEN ---
         function calcularEstadosGlobales() {
             let totales = { total:0, libres:0, vendidos:0, criticos:0, filter:{ todos:0, disponible:0, al_dia:0, en_mora:0, en_riesgo:0, falta_gestion:0, transferido:0, ocupacion:0 } };
             const hoy = new Date();
@@ -899,25 +905,40 @@
                 if (!d.mza || !d.nro) continue;
                 
                 let est = "disponible";
-                if(d.tipo==='comercial' && d.cliente) {
-                    if (d.plan !== "1" && d.cuotaActual >= parseInt(d.plan) && parseInt(d.plan) > 0) est = "transferido";
-                    else if(d.mesCubierto) {
-                        const [y,m] = d.mesCubierto.split('-').map(Number);
-                        const mora = (hoy.getFullYear()-y)*12 + ((hoy.getMonth()+1)-m);
-                        const gest = d.fechaPago ? Math.floor((hoy - new Date(d.fechaPago))/(1000*60*60*24*30)) : 99;
-                        if(gest >= 2) est = "falta_gestion"; else if(mora >= 3) est = "en_riesgo"; else if(mora > 0) est = "en_mora"; else est = "al_dia";
-                    } else est = "al_dia";
-                } else est = d.tipo;
+                if(d.tipo === 'comercial') {
+                    if (d.cliente && d.cliente.trim() !== "") {
+                        if (d.plan !== "1" && d.cuotaActual >= parseInt(d.plan) && parseInt(d.plan) > 0) est = "transferido";
+                        else if(d.mesCubierto) {
+                            const [y,m] = d.mesCubierto.split('-').map(Number);
+                            const mora = (hoy.getFullYear()-y)*12 + ((hoy.getMonth()+1)-m);
+                            const gest = d.fechaPago ? Math.floor((hoy - new Date(d.fechaPago))/(1000*60*60*24*30)) : 99;
+                            if(gest >= 2) est = "falta_gestion"; else if(mora >= 3) est = "en_riesgo"; else if(mora > 0) est = "en_mora"; else est = "al_dia";
+                        } else {
+                            est = "al_dia";
+                        }
+                    } else {
+                        est = "disponible"; // EL AJUSTE DE LÓGICA
+                    }
+                } else {
+                    est = d.tipo;
+                }
                 
                 d.estado = est; 
                 document.getElementById(key).style.fill = coloresRelleno[est] || "#fff";
 
                 totales.filter.todos++;
                 if (totales.filter[est] !== undefined) totales.filter[est]++;
-                if (est!=='plaza' && est!=='recuperado') {
+                
+                if (est !== 'plaza' && est !== 'recuperado') {
                     totales.total++;
-                    if(est==='disponible') totales.libres++; else totales.vendidos++;
-                    if(est==='en_riesgo' || est==='falta_gestion') totales.criticos++;
+                    if (est === 'disponible') {
+                        totales.libres++;
+                    } else {
+                        totales.vendidos++;
+                    }
+                    if (est === 'en_riesgo' || est === 'falta_gestion') {
+                        totales.criticos++;
+                    }
                 }
             }
 

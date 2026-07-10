@@ -18,61 +18,94 @@
 </head>
 <body class="bg-gray-100 font-sans md:h-screen flex flex-col min-h-screen">
 
-    <!-- Modal de Rendición Manual -->
     <div id="modal-rendicion" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm px-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200">
             <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
-                <h2 class="font-bold flex items-center gap-2 text-sm uppercase tracking-wider">📝 Cargar Rendición Manual</h2>
+                <h2 class="font-bold flex items-center gap-2 text-sm uppercase tracking-wider">📝 Panel de Carga Rápida (Rendición Manual)</h2>
                 <button onclick="cerrarModalRendicion()" class="text-slate-300 hover:text-white cursor-pointer text-lg">✖</button>
             </div>
-            <div class="p-5 space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Manzana</label>
-                        <select id="rend-mza" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">--</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                        </select>
+            
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Manzana</label>
+                            <select id="rend-mza" oninput="autoCompletarModalPorLote()" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">--</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Lote N°</label>
+                            <input id="rend-nro" type="number" oninput="autoCompletarModalPorLote()" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ej: 5">
+                        </div>
                     </div>
                     <div>
-                        <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Lote N°</label>
-                        <input id="rend-nro" type="number" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nombre del Comprador</label>
+                        <input id="rend-cliente" type="text" list="lista-clientes" oninput="autoCompletarModalPorCliente()" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe para buscar...">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 border-t border-gray-100 pt-2">
+                        <div>
+                            <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Monto Abonado Gs.</label>
+                            <input id="rend-monto" type="number" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-emerald-700 font-bold uppercase block mb-1">Paga la Cuota N°</label>
+                            <input id="rend-cuota" type="number" class="w-full bg-emerald-50 border border-emerald-300 font-bold text-emerald-900 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-blue-700 font-bold uppercase block mb-1">Mes que Cubre</label>
+                            <input id="rend-mes" type="month" class="w-full bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Fecha de Pago Física</label>
+                            <input id="rend-fecha" type="date" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nombre del Comprador</label>
-                    <input id="rend-cliente" type="text" list="lista-clientes" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Escribe para buscar o autocompletar...">
+
+                <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">📋 Líneas cargadas en esta sesión</h3>
+                        <div class="max-h-[220px] overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-inner">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-100 text-[9px] font-bold text-slate-600 sticky top-0 border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-2">Lote</th>
+                                        <th class="p-2">Comprador</th>
+                                        <th class="p-2">Monto</th>
+                                        <th class="p-2 text-center">Cuota</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-resumen-modal">
+                                    <tr>
+                                        <td colspan="4" class="p-4 text-center text-[11px] text-gray-400 italic">Ningún registro procesado en esta tanda.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-2 italic text-right">Los cambios se guardan y sincronizan en tiempo real.</div>
                 </div>
-                <div class="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
-                    <div>
-                        <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Monto Abonado Gs.</label>
-                        <input id="rend-monto" type="number" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-emerald-700 font-bold uppercase block mb-1">Paga la Cuota N°</label>
-                        <input id="rend-cuota" type="number" class="w-full bg-emerald-50 border border-emerald-300 font-bold text-emerald-900 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] text-blue-700 font-bold uppercase block mb-1">Mes que Cubre</label>
-                        <input id="rend-mes" type="month" class="w-full bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Fecha de Pago Física</label>
-                        <input id="rend-fecha" type="date" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                </div>
-                <button onclick="guardarRendicionManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow mt-2 flex justify-center items-center gap-2 cursor-pointer">
-                    <span>💾</span> Registrar Rendición
+            </div>
+
+            <div class="bg-slate-100 p-4 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-2.5">
+                <button onclick="cerrarModalRendicion()" class="w-full sm:w-auto bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 px-5 rounded-xl text-xs shadow transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                    <span>❌</span> Cancelar Proceso
+                </button>
+                <button onclick="guardarRendicionManual(true)" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                    <span>➡️</span> Siguiente Fila (Otro Lote)
+                </button>
+                <button onclick="guardarRendicionManual(false)" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                    <span>💾</span> Registrar y Guardar Todo
                 </button>
             </div>
         </div>
     </div>
-    <!-- Fin Modal -->
-
     <header class="bg-slate-800 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-2 z-10">
         <div class="flex items-center space-x-3">
             <div class="bg-emerald-500 p-2 rounded-lg text-xl font-bold">🗺️</div>
@@ -192,7 +225,6 @@
                 </div>
             </div>
 
-            <!-- Cartel Llamado Flotante (Tooltip) -->
             <div id="tooltip-lote" class="hidden absolute bg-slate-900/95 text-white text-[11px] p-3 rounded-xl shadow-2xl z-30 pointer-events-none border border-slate-700 flex flex-col gap-0.5 min-w-[160px] backdrop-blur-xs">
                 <div id="tip-lote-mza" class="font-black text-slate-200 border-b border-slate-700 pb-1 mb-1 text-xs tracking-wide"></div>
                 <div id="tip-cliente" class="font-medium truncate"></div>
@@ -351,6 +383,7 @@
         let loteSeleccionadoActual = null;
         let filtroActivoActual = "todos";
         let modoMapeoActivo = false;
+        let rendicionesSesion = []; // Array local de control visual para la grilla modal
 
         const coloresRelleno = {
             "disponible": "#ffffff", "al_dia": "#34d399", "en_mora": "#fcd34d", 
@@ -565,7 +598,7 @@
 
             if (tipo === 'comercial' && cliente && monto > 0 && cuota > 0) {
                 let percProp = 0.80; 
-                if (plan === "130" && cuota <= 19 && cuota % 2 !== 0) percProp = 0;
+                if (plan === "130" && cuota <= 19 && cuota % 2 !== 0) percPre = 0;
                 else if (plan === "65" && cuota <= 9 && cuota % 2 !== 0) percProp = 0;
                 else if (plan === "40" && cuota <= 7 && cuota % 2 !== 0) percProp = 0;
                 
@@ -579,6 +612,62 @@
             return estado;
         }
 
+        // --- LÓGICA DE AUTOCOMPLETADO INTELIGENTE (MODAL) ---
+        window.autoCompletarModalPorLote = function() {
+            const mza = document.getElementById('rend-mza').value.toUpperCase().trim();
+            const rawNro = document.getElementById('rend-nro').value.trim();
+            if(!mza || !rawNro) return;
+            const nro = String(rawNro).padStart(2, '0');
+
+            for (const key in baseDatosLotes) {
+                const l = baseDatosLotes[key];
+                if (l.mza === mza && String(l.nro).padStart(2, '0') === nro) {
+                    if(l.cliente) {
+                        document.getElementById('rend-cliente').value = l.cliente;
+                        if(l.montoCuota) document.getElementById('rend-monto').value = l.montoCuota;
+                        if(l.cuotaActual) document.getElementById('rend-cuota').value = parseInt(l.cuotaActual) + 1;
+                    }
+                    break;
+                }
+            }
+        };
+
+        window.autoCompletarModalPorCliente = function() {
+            const clienteTipeado = document.getElementById('rend-cliente').value.trim().toLowerCase();
+            if(clienteTipeado.length < 3) return;
+
+            for (const key in baseDatosLotes) {
+                const l = baseDatosLotes[key];
+                if (l.cliente && l.cliente.toLowerCase() === clienteTipeado || l.cliente && l.cliente.toLowerCase().includes(clienteTipeado)) {
+                    document.getElementById('rend-mza').value = l.mza || "";
+                    document.getElementById('rend-nro').value = l.nro ? parseInt(l.nro) : "";
+                    if(l.montoCuota) document.getElementById('rend-monto').value = l.montoCuota;
+                    if(l.cuotaActual) document.getElementById('rend-cuota').value = parseInt(l.cuotaActual) + 1;
+                    break;
+                }
+            }
+        };
+
+        // --- GESTIÓN DE TABLA RESUMEN INTERNA DEL MODAL ---
+        function agregarAResumenSesion(mza, nro, cliente, monto, cuota) {
+            rendicionesSesion.push({ mza, nro, cliente, monto, cuota });
+            const tbody = document.getElementById('tbody-resumen-modal');
+            if(!tbody) return;
+            
+            tbody.innerHTML = "";
+            rendicionesSesion.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 text-[11px] text-gray-700 hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-2 font-bold text-slate-800">Mza ${r.mza} - L. ${r.nro}</td>
+                    <td class="p-2 truncate max-w-[130px]" title="${r.cliente}">${r.cliente}</td>
+                    <td class="p-2 font-semibold text-emerald-600">${parseFloat(r.monto).toLocaleString('es-PY')} Gs.</td>
+                    <td class="p-2 text-center font-bold text-indigo-600">C. ${r.cuota}</td>
+                `;
+                tbody.prepend(tr); // Muestra los últimos arriba
+            });
+        }
+
         // --- LÓGICA MODAL RENDICIÓN MANUAL ---
         window.abrirModalRendicion = function() {
             document.getElementById('rend-mza').value = "";
@@ -589,25 +678,38 @@
             document.getElementById('rend-mes').value = "";
             document.getElementById('rend-fecha').value = new Date().toISOString().split('T')[0];
             
+            rendicionesSesion = []; // Resetea el historial visual de la sesión actual
+            const tbody = document.getElementById('tbody-resumen-modal');
+            if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-[11px] text-gray-400 italic">Ningún registro procesado en esta tanda.</td></tr>`;
+            
             document.getElementById('modal-rendicion').classList.remove('hidden');
+            document.getElementById('rend-mza').focus();
         };
 
         window.cerrarModalRendicion = function() {
             document.getElementById('modal-rendicion').classList.add('hidden');
         };
 
-        window.guardarRendicionManual = function() {
+        window.guardarRendicionManual = function(autoContinuar = false) {
             const mza = document.getElementById('rend-mza').value.toUpperCase().trim();
-            const nro = String(document.getElementById('rend-nro').value).trim().padStart(2, '0');
+            const rawNro = document.getElementById('rend-nro').value.trim();
             const cliente = document.getElementById('rend-cliente').value.trim();
             const monto = parseFloat(document.getElementById('rend-monto').value) || 0;
             const cuota = parseInt(document.getElementById('rend-cuota').value) || 0;
             const mesCub = document.getElementById('rend-mes').value;
             const fecha = document.getElementById('rend-fecha').value;
 
-            if (!mza || !nro) { alert("⚠️ Faltan datos: Manzana y Lote son obligatorios."); return; }
-            if (monto <= 0) { alert("⚠️ El monto de la cuota no puede estar vacío o ser 0."); return; }
+            // Si presionó Guardar y no hay datos escritos, simplemente interpreta un cierre limpio.
+            if(!autoContinuar && !mza && !rawNro && !cliente) {
+                cerrarModalRendicion();
+                return;
+            }
 
+            if (!mza || !rawNro) { alert("⚠️ Faltan datos: Manzana y Lote son obligatorios."); return; }
+            if (monto <= 0) { alert("⚠️ El monto de la cuota no puede estar vacío o ser 0."); return; }
+            if (!cliente) { alert("⚠️ El nombre del comprador es obligatorio para registrar la rendición."); return; }
+
+            const nro = String(rawNro).padStart(2, '0');
             let loteIdEncontrado = null;
             let datosLote = null;
 
@@ -625,15 +727,29 @@
                 datosLote.cuotaActual = cuota;
                 datosLote.mesCubierto = mesCub;
                 datosLote.fechaPago = fecha;
-                if(cliente) datosLote.cliente = cliente;
+                datosLote.cliente = cliente;
                 datosLote.tipo = "comercial";
 
                 set(ref(db, 'lotes/' + loteIdEncontrado), datosLote).then(() => {
-                    alert(`✅ Pago Registrado para Manzana ${mza}, Lote ${nro}`);
-                    cerrarModalRendicion();
+                    // Agrega la carga al resumen dinámico
+                    agregarAResumenSesion(mza, nro, cliente, monto, cuota);
+
+                    if(autoContinuar) {
+                        // Limpia el formulario para la siguiente fila pero preserva la fecha física por comodidad
+                        document.getElementById('rend-mza').value = "";
+                        document.getElementById('rend-nro').value = "";
+                        document.getElementById('rend-cliente').value = "";
+                        document.getElementById('rend-monto').value = "";
+                        document.getElementById('rend-cuota').value = "";
+                        document.getElementById('rend-mes').value = "";
+                        document.getElementById('rend-mza').focus();
+                    } else {
+                        alert("✅ Estupendo. Todos los datos cargados fueron impactados y resguardados en Firebase.");
+                        cerrarModalRendicion();
+                    }
                 });
             } else {
-                alert(`❌ No se encontró ningún lote con Manzana ${mza} y Nro ${nro} en el plano.`);
+                alert(`❌ No se encontró ningún lote físico con Manzana ${mza} y Nro ${nro} en el plano vectorial.`);
             }
         };
 

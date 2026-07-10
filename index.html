@@ -59,12 +59,6 @@
                 <button onclick="document.getElementById('import-csv').click()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
                     <span>📥</span> <span>Importar Planilla Inmobiliaria</span>
                 </button>
-                
-                <!-- NUEVA OPCIÓN: BOTÓN PARA ABRIR VENTANA DE RENDICIÓN MANUAL TIPO MATRIZ -->
-                <button onclick="abrirModalLiquidacion()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer font-sans">
-                    <span>🧾</span> <span>Cargar Rendición Manual (Matriz)</span>
-                </button>
-
                 <button onclick="exportarBaseDatosCSV()" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 rounded-lg shadow-xs transition-colors text-xs flex justify-center space-x-1 cursor-pointer">
                     <span>📤</span> <span>Exportar Base Total</span>
                 </button>
@@ -122,11 +116,25 @@
                         </label>
                     </div>
                     <div id="controles-mapeo" class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 hidden">
-                        <div><label class="text-[9px] uppercase font-bold text-gray-500">Manzana</label><input id="map-mza" type="text" value="A" class="w-full bg-gray-100 border rounded p-1.5 text-xs text-center font-bold uppercase"></div>
+                        <div>
+                            <label class="text-[9px] uppercase font-bold text-gray-500">Manzana</label>
+                            <select id="map-mza" class="w-full bg-gray-100 border rounded p-1.5 text-xs text-center font-bold uppercase focus:outline-none">
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                            </select>
+                        </div>
                         <div><label class="text-[9px] uppercase font-bold text-gray-500">Sig. Lote</label><input id="map-nro" type="number" value="1" class="w-full bg-gray-100 border rounded p-1.5 text-xs text-center font-bold"></div>
                     </div>
                     <button onclick="toggleMapeo()" class="mt-2 w-full text-center text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer">Ocultar</button>
                 </div>
+            </div>
+
+            <div id="tooltip-lote" class="hidden absolute bg-slate-900/95 text-white text-[11px] p-3 rounded-xl shadow-2xl z-30 pointer-events-none border border-slate-700 flex flex-col gap-0.5 min-w-[160px] backdrop-blur-xs">
+                <div id="tip-lote-mza" class="font-black text-slate-200 border-b border-slate-700 pb-1 mb-1 text-xs tracking-wide"></div>
+                <div id="tip-cliente" class="font-medium truncate"></div>
+                <div id="tip-cuotas" class="text-slate-400"></div>
+                <div id="tip-estado" class="font-bold mt-1 text-xs"></div>
             </div>
 
             <div id="contenedor-svg" class="w-full h-full max-w-[480px] flex items-center justify-center">
@@ -150,10 +158,22 @@
                             <span id="badge-estado-calculado" class="inline-block px-2.5 py-0.5 rounded text-xs font-black shadow-xs uppercase">---</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2 pt-1">
-                            <div><label class="text-[10px] uppercase font-bold text-slate-500 block">Manzana</label><input id="form-mza" type="text" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none"></div>
+                            <div>
+                                <label class="text-[10px] uppercase font-bold text-slate-500 block">Manzana</label>
+                                <select id="form-mza" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none">
+                                    <option value="">--</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                </select>
+                            </div>
                             <div><label class="text-[10px] uppercase font-bold text-slate-500 block">Lote N°</label><input id="form-nro" type="text" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none"></div>
                         </div>
-                        <div id="seccion-cliente" class="mt-3 pt-2.5 border-t border-gray-100"><label id="lbl-cliente" class="text-[10px] font-bold text-slate-500 uppercase block">Nombre del Comprador</label><input id="form-cliente" type="text" oninput="calcularCamposAutomaticos()" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none"></div>
+                        <div class="mt-3 pt-2.5 border-t border-gray-100">
+                            <label id="lbl-cliente" class="text-[10px] font-bold text-slate-500 uppercase block">Nombre del Comprador</label>
+                            <input id="form-cliente" type="text" list="lista-clientes" oninput="calcularCamposAutomaticos()" class="w-full bg-gray-50 border rounded-lg p-2 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none" placeholder="Escribe para buscar o registrar...">
+                            <datalist id="lista-clientes"></datalist>
+                        </div>
                     </div>
 
                     <div class="bg-white p-3 rounded-xl shadow-xs border border-gray-200">
@@ -231,91 +251,6 @@
                 </div>
             </div>
         </aside>
-    </div>
-
-    <!-- VENTANA FLOTANTE (MODAL): RENDICIÓN Y REGISTRO EN LIBRO DIARIO HISTÓRICO -->
-    <div id="modal-liquidacion" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-200">
-            
-            <header class="bg-slate-800 text-white p-4 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <span class="text-xl">📊</span>
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider">Carga de Rendición Inmobiliaria (Historial Inmutable)</h2>
-                        <p class="text-[10px] text-slate-400">Los cobros se guardarán individualmente respetando la auditoría de fechas de carga.</p>
-                    </div>
-                </div>
-                <button onclick="cerrarModalLiquidacion()" class="text-slate-400 hover:text-white text-base font-bold cursor-pointer">✕</button>
-            </header>
-
-            <div class="p-3 bg-slate-50 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
-                <div>
-                    <label class="block font-bold text-gray-600 uppercase mb-0.5 text-[9px]">Fecha de Comunicación / Carga Sistema</label>
-                    <input type="date" id="liq-fecha-sistema" class="bg-white border border-gray-300 rounded-lg p-1.5 font-bold text-slate-800 focus:outline-none">
-                </div>
-                <div class="flex space-x-2 w-full sm:w-auto justify-end">
-                    <button onclick="agregarFilaLiquidacion()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer text-xs">
-                        ➕ Añadir Fila
-                    </button>
-                    <button onclick="procesarLiquidacionNube()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg font-bold transition-colors shadow-xs cursor-pointer text-xs">
-                        💾 Procesar e Inyectar a Base de Datos
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tabla Matriz editable -->
-            <div class="flex-1 overflow-auto p-4 bg-white">
-                <table class="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100 text-slate-700 uppercase text-[9px] font-bold border-b border-slate-200">
-                            <th class="p-2 border w-24">Lote (Mza/Nro)</th>
-                            <th class="p-2 border w-32">F. Pago Física</th>
-                            <th class="p-2 border">Cliente</th>
-                            <th class="p-2 border w-24">Nro Cuota</th>
-                            <th class="p-2 border w-32">Mes Cubierto</th>
-                            <th class="p-2 border">Factura</th>
-                            <th class="p-2 border w-28">Monto Pagado</th>
-                            <th class="p-2 border w-28">Monto Inmo</th>
-                            <th class="p-2 border w-28">Monto Prop</th>
-                            <th class="p-2 border text-center w-10">✕</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-liquidacion" class="divide-y divide-gray-200">
-                        <!-- Carga dinámica -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Footer: Réplica impositiva de la planilla física de liquidación -->
-            <footer class="bg-slate-900 text-slate-200 p-4 border-t border-slate-700 grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
-                <div>
-                    <h4 class="text-[9px] uppercase tracking-wider text-amber-400 font-bold mb-1">📐 Cálculo Auxiliar Liquidación</h4>
-                    <div class="space-y-1 bg-slate-800 p-2 rounded-lg border border-slate-700">
-                        <div class="flex justify-between"><span>Liquidación Total Bruta:</span><span id="calc-total-bruto" class="font-bold">0 Gs.</span></div>
-                        <div class="flex justify-between text-rose-300"><span>IVA 5% (Fórmula Impositiva):</span><span id="calc-iva5">0 Gs.</span></div>
-                        <div class="flex justify-between text-emerald-400 font-semibold"><span>Total Autofactura Propietario:</span><span id="calc-autofactura">0 Gs.</span></div>
-                        <div class="flex justify-between text-orange-300"><span>Retención IRE / IRP (2,4%):</span><span id="calc-retencion">0 Gs.</span></div>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-[9px] uppercase tracking-wider text-sky-400 font-bold mb-1">🏢 Descuentos Comisión y Otros</h4>
-                    <div class="space-y-1 bg-slate-800 p-2 rounded-lg border border-slate-700">
-                        <div class="flex justify-between"><span>Monto Comisión Inmobiliaria:</span><span id="calc-monto-inmo">0 Gs.</span></div>
-                        <div class="flex justify-between text-slate-400"><span>IVA 10% s/ Comisión:</span><span id="calc-iva10">0 Gs.</span></div>
-                        <div class="flex justify-between items-center text-rose-300">
-                            <span>Otros Gastos (Limpieza/etc):</span>
-                            <input type="number" id="calc-otros-descuentos" oninput="recalcularMatriz()" value="0" class="w-20 bg-slate-700 border border-slate-500 rounded text-right text-white p-0.5 text-[10px]">
-                        </div>
-                        <div class="flex justify-between border-t border-slate-600 pt-1 text-rose-400 font-bold"><span>Total Descuentos:</span><span id="calc-total-descuentos">0 Gs.</span></div>
-                    </div>
-                </div>
-                <div class="flex flex-col justify-center items-end bg-slate-950 p-3 rounded-xl border border-slate-800">
-                    <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Monto Neto a cobrar por Propietario</span>
-                    <span id="calc-total-neto" class="text-2xl font-black text-emerald-400 tracking-wide">0 Gs.</span>
-                </div>
-            </footer>
-
-        </div>
     </div>
 
     <script type="module">
@@ -401,14 +336,15 @@
                                 return;
                             }
                             abrirFichaLote(idReal);
+                            mostrarLlamadoFlotante(e, idReal);
                         });
                     }
                 });
 
-                window.baseDatosLotes = baseDatosLotes; // Exportar globalmente para buscador de la matriz modal
                 if (Object.keys(datosNube).length === 0) set(lotesRef, baseDatosLotes);
                 
                 calcularEstadosGlobales();
+                actualizarDatalistClientes();
                 filtrarMapa(filtroActivoActual);
                 if (loteSeleccionadoActual && document.getElementById('controles-edicion-activa').classList.contains('hidden')) abrirFichaLote(loteSeleccionadoActual);
             });
@@ -438,6 +374,89 @@
             alternarCamposPorTipo();
             setFormEditable(false);
             if(window.innerWidth < 768) document.getElementById('info-lote').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- LLAMADO FLOTANTE (TOOLTIP) AL HACER CLICK EN LOTE ---
+        function mostrarLlamadoFlotante(e, id) {
+            const d = baseDatosLotes[id];
+            const tooltip = document.getElementById('tooltip-lote');
+            if (!tooltip) return;
+
+            if (!d || !d.mza || !d.nro) {
+                tooltip.classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('tip-lote-mza').innerText = `Manzana ${d.mza} - Lote ${d.nro}`;
+            
+            if (d.cliente) {
+                document.getElementById('tip-cliente').innerText = `👤 Comprador: ${d.cliente}`;
+                document.getElementById('tip-cuotas').innerText = `📊 Cuota: ${d.cuotaActual || 0} / ${d.plan || '130'}`;
+                
+                let estadoAmigable = "🟢 Al Día";
+                let colorTexto = "text-emerald-400";
+                
+                if (d.estado === "en_mora" || d.estado === "en_riesgo" || d.estado === "falta_gestion") {
+                    estadoAmigable = "🔴 Atrasado";
+                    colorTexto = "text-rose-400";
+                } else if (d.estado === "transferido") {
+                    estadoAmigable = "📜 Titulado / Cancelado";
+                    colorTexto = "text-violet-400";
+                } else if (d.estado === "reservado") {
+                    estadoAmigable = "🔹 Reservado (Seña)";
+                    colorTexto = "text-sky-400";
+                } else if (d.estado === "ocupacion") {
+                    estadoAmigable = "⚠️ Conflicto / Ocupación";
+                    colorTexto = "text-yellow-400";
+                }
+
+                const elEst = document.getElementById('tip-estado');
+                elEst.innerText = estadoAmigable;
+                elEst.className = `font-bold mt-1 text-xs ${colorTexto}`;
+            } else {
+                document.getElementById('tip-cliente').innerText = "Disponible";
+                document.getElementById('tip-cuotas').innerText = "Sin asignación comercial";
+                document.getElementById('tip-estado').innerText = "⚪ Libre";
+                document.getElementById('tip-estado').className = "font-bold mt-1 text-xs text-gray-400";
+            }
+
+            // Posicionar relativo al componente <main>
+            const mainEl = document.querySelector('main');
+            const rect = mainEl.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            tooltip.style.left = `${x + 12}px`;
+            tooltip.style.top = `${y + 12}px`;
+            tooltip.classList.remove('hidden');
+        }
+
+        // Ocultar llamado flotante si se hace clic fuera de los vectores
+        document.addEventListener('click', (e) => {
+            const tooltip = document.getElementById('tooltip-lote');
+            if (tooltip && !e.target.closest('#contenedor-svg')) {
+                tooltip.classList.add('hidden');
+            }
+        });
+
+        // --- ACTUALIZAR DATALIST DE CLIENTES PARA AUTOCOMPLETADO ---
+        function actualizarDatalistClientes() {
+            const dl = document.getElementById('lista-clientes');
+            if (!dl) return;
+            dl.innerHTML = "";
+            
+            const clientesUnicos = new Set();
+            Object.values(baseDatosLotes).forEach(l => {
+                if (l.cliente && l.cliente.trim() !== "") {
+                    clientesUnicos.add(l.cliente.trim());
+                }
+            });
+
+            clientesUnicos.forEach(cliente => {
+                const opcion = document.createElement('option');
+                opcion.value = cliente;
+                dl.appendChild(opcion);
+            });
         }
 
         function calcularCamposAutomaticos() {
@@ -624,12 +643,13 @@
                 }
 
                 if (actualizados === 0) {
-                    alert(`⚠️ Error: El formato fue leído correctamente, pero NO se encontró ningún lote coincidente.\n\nEjemplo de lote buscado: ${lotesNoEncontrados[0] || 'Ninguno'}`);
+                    alert(`⚠️ Error: El formato fue leído correctamente, pero NO se encontró ningún lote coincidente en tu mapa.\n\nEjemplo de lote buscado: ${lotesNoEncontrados[0] || 'Ninguno'}\n\nAsegurate de haber asignado la manzana y número correctos usando la herramienta "Asignación Rápida".`);
                 } else {
                     const iva5 = liquidacionTotalBruta * (1.5 / 101.5);
                     const ire24 = (liquidacionTotalBruta - iva5) * 0.024;
-                    alert(`✅ Carga Exitosa: ${actualizados} lotes vinculados.\n\nRecaudación Bruta: ${liquidacionTotalBruta.toLocaleString('es-PY')} Gs.`);
+                    alert(`✅ Carga Exitosa: ${actualizados} lotes enlazados con la planilla.\n\n📊 RESUMEN (Proyección):\nRecaudación Bruta: ${liquidacionTotalBruta.toLocaleString('es-PY')} Gs.\nIVA 5%: -${iva5.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.\nRetención IRE (2.4%): -${ire24.toLocaleString('es-PY', {maximumFractionDigits:0})} Gs.`);
                 }
+                
                 document.getElementById('import-csv').value = ""; 
             };
             reader.readAsText(file);
@@ -666,12 +686,11 @@
                 }
             }
 
-            document.getElementById('resumen-total').innerText = totales.total;
-            document.getElementById('resumen-vendidos').innerText = totales.vendidos;
-            document.getElementById('resumen-criticos').innerText = totales.criticos;
-            
-            const elLibres = document.getElementById('resumen-libres');
-            if(elLibres) elLibres.innerText = totales.libres;
+            // Validar que los elementos existan antes de insertar texto
+            const elTotal = document.getElementById('resumen-total'); if(elTotal) elTotal.innerText = totales.total;
+            const elLibres = document.getElementById('resumen-libres'); if(elLibres) elLibres.innerText = totales.libres;
+            const elVendidos = document.getElementById('resumen-vendidos'); if(elVendidos) elVendidos.innerText = totales.vendidos;
+            const elCriticos = document.getElementById('resumen-criticos'); if(elCriticos) elCriticos.innerText = totales.criticos;
             
             for(const k in totales.filter) {
                 const el = document.getElementById(`count-${k}`);
@@ -718,7 +737,8 @@
         };
 
         window.liberarLote = function() {
-            if (!confirm("⚠️ ¿Estás seguro de que deseas LIBERAR este lote?")) return;
+            if (!confirm("⚠️ ¿Estás seguro de que deseas LIBERAR este lote? Se borrarán todos los datos del cliente, historial de pagos, y el lote volverá a figurar como 'Disponible' en el sistema.")) return;
+            
             document.getElementById('form-tipo-lote').value = "comercial";
             document.getElementById('form-cliente').value = ""; 
             document.getElementById('form-plan-cuotas').value = "130";
@@ -726,6 +746,7 @@
             document.getElementById('form-cuota-actual').value = "";
             document.getElementById('form-mes-cubierto').value = ""; 
             document.getElementById('form-fecha-pago').value = "";
+            
             alternarCamposPorTipo();
             document.getElementById('btn-guardar').click();
         };
@@ -745,7 +766,10 @@
         window.conmutarModoMapeo = () => {
             modoMapeoActivo = document.getElementById('chk-modo-mapeo').checked;
             document.getElementById('controles-mapeo').classList.toggle('hidden', !modoMapeoActivo);
-            if(modoMapeoActivo) { document.getElementById('info-lote').classList.add('hidden'); document.getElementById('panel-acciones').classList.add('hidden'); }
+            if(modoMapeoActivo) { 
+                document.getElementById('info-lote').classList.add('hidden'); 
+                document.getElementById('panel-acciones').classList.add('hidden'); 
+            }
         };
 
         window.exportarBaseDatosCSV = () => {
@@ -759,214 +783,24 @@
             link.click();
         };
 
-        function alternarCamposPorTipo() {
-            const tipo = document.getElementById('form-tipo-lote').value;
-            const secFin = document.getElementById('seccion-financiera');
-            const lblCli = document.getElementById('lbl-cliente');
-            if (tipo === 'comercial' || tipo === 'reservado') {
-                secFin.classList.remove('hidden');
-                lblCli.innerText = "Nombre del Comprador";
-            } else if (tipo === 'transferido') {
-                secFin.classList.remove('hidden');
-                lblCli.innerText = "Titulado a Nombre de";
-            } else {
-                secFin.classList.add('hidden');
-                lblCli.innerText = "Observaciones / Detalles";
-            }
-            calcularCamposAutomaticos();
-        }
-
-        // =========================================================================
-        // 🚀 NUEVA LÓGICA DE CONTROL PARA LA MATRIZ DE RENDICIÓN MASIVA (MODAL)
-        // =========================================================================
-        
-        document.getElementById('liq-fecha-sistema').value = new Date().toISOString().split('T')[0];
-
-        window.abrirModalLiquidacion = function() {
-            document.getElementById('modal-liquidacion').classList.remove('hidden');
-            document.getElementById('tbody-liquidacion').innerHTML = '';
-            agregarFilaLiquidacion(); 
-        }
-
-        window.cerrarModalLiquidacion = function() {
-            document.getElementById('modal-liquidacion').classList.add('hidden');
-        }
-
-        window.agregarFilaLiquidacion = function() {
-            const tbody = document.getElementById('tbody-liquidacion');
-            const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
-            
-            const tr = document.createElement('tr');
-            tr.id = rowId;
-            tr.className = "hover:bg-slate-50 transition-colors";
-            tr.innerHTML = `
-                <td class="p-1 border"><input type="text" placeholder="Ej: A/03" class="w-full p-1 bg-white border border-gray-300 rounded text-center font-bold text-slate-800 uppercase focus:outline-none" oninput="window.vincularLoteDesdeMat(this)"></td>
-                <td class="p-1 border"><input type="date" class="w-full p-1 bg-white border border-gray-300 rounded text-center focus:outline-none col-fecha-pago"></td>
-                <td class="p-1 border"><input type="text" class="w-full p-1 bg-white border border-gray-300 rounded font-medium focus:outline-none col-cliente" placeholder="Cliente"></td>
-                <td class="p-1 border"><input type="text" class="w-full p-1 bg-white border border-gray-300 rounded text-center font-bold focus:outline-none col-cuota" placeholder="Ej: 67/130"></td>
-                <td class="p-1 border"><input type="month" class="w-full p-1 bg-white border border-gray-300 rounded text-center text-[10px] focus:outline-none col-mes"></td>
-                <td class="p-1 border"><input type="text" class="w-full p-1 bg-white border border-gray-300 rounded text-center focus:outline-none col-factura" placeholder="004-..."></td>
-                <td class="p-1 border"><input type="number" class="w-full p-1 bg-white border border-gray-300 rounded text-right font-bold text-blue-700 focus:outline-none monto-pagado" oninput="window.recalcularMatriz()" value="0"></td>
-                <td class="p-1 border"><input type="number" class="w-full p-1 bg-white border border-gray-300 rounded text-right text-slate-600 focus:outline-none monto-inmo" oninput="window.recalcularMatriz()" value="0"></td>
-                <td class="p-1 border"><input type="number" class="w-full p-1 bg-gray-50 border border-gray-300 rounded text-right text-emerald-700 font-bold monto-prop" value="0" readonly></td>
-                <td class="p-1 border text-center"><button onclick="document.getElementById('${rowId}').remove(); window.recalcularMatriz();" class="text-rose-500 hover:text-rose-700 font-bold p-1 cursor-pointer">🗑️</button></td>
-            `;
-            tbody.appendChild(tr);
-        }
-
-        window.vincularLoteDesdeMat = function(inputElement) {
-            const texto = inputElement.value.trim().toUpperCase();
-            const fila = inputElement.closest('tr');
-            const inputCliente = fila.querySelector('.col-cliente');
-            
-            if (!texto.includes('/')) {
-                inputElement.style.borderColor = '#d1d5db';
-                inputElement.style.backgroundColor = '#ffffff';
-                delete fila.dataset.svgId;
-                return;
-            }
-            
-            const partes = texto.split('/');
-            const mzaBuscar = partes[0].trim().toUpperCase().replace(/^0+/, '');
-            const nroBuscar = partes[1].trim().toUpperCase().replace(/^0+/, '');
-            
-            let encontrado = false;
-            for (const key in window.baseDatosLotes || {}) {
-                const lote = window.baseDatosLotes[key];
-                const lMza = String(lote.mza || "").trim().toUpperCase().replace(/^0+/, '');
-                const lNro = String(lote.nro || "").trim().toUpperCase().replace(/^0+/, '');
-                
-                if (lMza === mzaBuscar && lNro === nroBuscar) {
-                    encontrado = true;
-                    inputElement.style.borderColor = '#10b981'; 
-                    inputElement.style.backgroundColor = '#ecfdf5'; 
-                    fila.dataset.svgId = key; 
-                    
-                    if (lote.cliente && !inputCliente.value) {
-                        inputCliente.value = lote.cliente;
-                    }
-                    break;
-                }
-            }
-            
-            if (!encontrado) {
-                inputElement.style.borderColor = '#ef4444'; 
-                inputElement.style.backgroundColor = '#fef2f2'; 
-                delete fila.dataset.svgId;
-            }
-        }
-
-        window.recalcularMatriz = function() {
-            let totalBruto = 0;
-            let totalInmo = 0;
-            const filas = document.querySelectorAll('#tbody-liquidacion tr');
-            
-            filas.forEach(row => {
-                const mPagado = parseFloat(row.querySelector('.monto-pagado').value) || 0;
-                const mInmo = parseFloat(row.querySelector('.monto-inmo').value) || 0;
-                const mProp = Math.max(0, mPagado - mInmo);
-                
-                row.querySelector('.monto-prop').value = mProp;
-                totalBruto += mPagado;
-                totalInmo += mInmo;
-            });
-            
-            const otrosDescuentos = parseFloat(document.getElementById('calc-otros-descuentos').value) || 0;
-            
-            // Fórmulas impositivas de Paraguay según tu planilla adjunta
-            const iva5 = totalBruto * (1.5 / 101.5);
-            const baseAutofactura = totalBruto - iva5;
-            const retencionIRP = baseAutofactura * 0.024;
-            const iva10Inmo = totalInmo * 0.10;
-            
-            const totalDescuentos = iva5 + retencionIRP + totalInmo + iva10Inmo + otrosDescuentos;
-            const totalCobrarPropietario = totalBruto - totalDescuentos;
-
-            document.getElementById('calc-total-bruto').innerText = totalBruto.toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-iva5').innerText = Math.round(iva5).toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-autofactura').innerText = Math.round(baseAutofactura).toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-retencion').innerText = Math.round(retencionIRP).toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-monto-inmo').innerText = totalInmo.toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-iva10').innerText = Math.round(iva10Inmo).toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-total-descuentos').innerText = Math.round(totalDescuentos).toLocaleString('es-PY') + " Gs.";
-            document.getElementById('calc-total-neto').innerText = Math.round(totalCobrarPropietario).toLocaleString('es-PY') + " Gs.";
-        }
-
-        window.procesarLiquidacionNube = function() {
-            const fechaSistema = document.getElementById('liq-fecha-sistema').value;
-            const filas = document.querySelectorAll('#tbody-liquidacion tr');
-            
-            if (filas.length === 0) return alert("⚠️ Carga al menos una fila en la matriz.");
-            if (!fechaSistema) return alert("⚠️ Especifica la fecha de carga del sistema.");
-            
-            let procesados = 0;
-            
-            filas.forEach(row => {
-                const idLote = row.dataset.svgId;
-                if (!idLote) return; // Lote mal ingresado o inexistente en plano
-                
-                const fPagoFisica = row.querySelector('.col-fecha-pago').value;
-                const cliente = row.querySelector('.col-cliente').value.trim();
-                const cuotaTexto = row.querySelector('.col-cuota').value.trim();
-                const mes = row.querySelector('.col-mes').value;
-                const factura = row.querySelector('.col-factura').value.trim();
-                const mPagado = parseFloat(row.querySelector('.monto-pagado').value) || 0;
-                const mInmo = parseFloat(row.querySelector('.monto-inmo').value) || 0;
-                const mProp = parseFloat(row.querySelector('.monto-prop').value) || 0;
-                
-                if (!fPagoFisica) return; 
-
-                let cuotaActual = 0;
-                let plan = "130";
-                if (cuotaTexto.includes('/')) {
-                    const cp = cuotaTexto.split('/');
-                    cuotaActual = parseInt(cp[0]) || 0;
-                    plan = cp[1] ? cp[1].trim() : "130";
-                } else {
-                    cuotaActual = parseInt(cuotaTexto) || 0;
-                }
-
-                // 1. INYECCIÓN CRONOLÓGICA (Libro Diario Contable Inmutable)
-                // Esto permite almacenar múltiples registros del mismo lote en el mismo mes sin pisarse
-                const nuevoPagoRef = push(ref(db, `historial_pagos/${idLote}`));
-                set(nuevoPagoRef, {
-                    nroCuota: cuotaActual,
-                    plan: plan,
-                    mesCubierto: mes,
-                    factura: factura,
-                    montoPagado: mPagado,
-                    montoInmobiliaria: mInmo,
-                    montoPropietario: mProp,
-                    fechaPagoFisica: fPagoFisica,
-                    fechaCargaSistema: fechaSistema
-                });
-
-                // 2. ACTUALIZACIÓN DE FICHA SNAPSHOT (Estado visual del plano en tiempo real)
-                // Solo se sobreescribe el estado de la ficha principal si el pago cargado es igual o más reciente
-                const fichaActual = window.baseDatosLotes[idLote] || {};
-                if (cuotaActual >= (fichaActual.cuotaActual || 0)) {
-                    fichaActual.cuotaActual = cuotaActual;
-                    fichaActual.plan = plan;
-                    if (cliente) fichaActual.cliente = cliente;
-                    if (mes) fichaActual.mesCubierto = mes;
-                    fichaActual.fechaPago = fPagoFisica;
-                    fichaActual.montoCuota = mPagado;
-                    fichaActual.tipo = "comercial";
-                    set(ref(db, `lotes/${idLote}`), fichaActual);
-                }
-                procesados++;
-            });
-
-            if (procesados > 0) {
-                alert(`✅ Registro Completado: Se inyectaron ${procesados} transacciones históricas en el ledger auditado.`);
-                window.cerrarModalLiquidacion();
-            } else {
-                alert("⚠️ Ninguna fila procesada. Revisa que el indicador de lote (Mza/Nro) esté en verde.");
-            }
-        }
-
         window.alternarCamposPorTipo = alternarCamposPorTipo;
         window.calcularCamposAutomaticos = calcularCamposAutomaticos;
+    </script>
+    <script>
+        // Función global fallback para manipulación visual responsiva rápida
+        function alternarCamposPorTipo() {
+            const tipo = document.getElementById('form-tipo-lote').value;
+            const sFinan = document.getElementById('seccion-financiera');
+            const sCli = document.getElementById('seccion-cliente');
+            if(tipo === 'comercial' || tipo === 'reservado') {
+                if(sFinan) sFinan.classList.remove('hidden');
+                if(sCli) sCli.classList.remove('hidden');
+            } else {
+                if(sFinan) sFinan.classList.add('hidden');
+                if(tipo === 'plaza' ? sCli && sCli.classList.add('hidden') : sCli && sCli.classList.remove('hidden'));
+            }
+            if(typeof window.calcularCamposAutomaticos === 'font') window.calcularCamposAutomaticos();
+        }
     </script>
 </body>
 </html>
